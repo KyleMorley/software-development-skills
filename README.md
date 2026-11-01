@@ -1,6 +1,6 @@
 # Software Development Skills
 
-Small C# exercises with an AI coach: pull, solve, push, review.
+Software engineering practice with an AI coach: pull, solve, push, review.
 
 ## Run
 
@@ -17,10 +17,10 @@ Register runnable exercises in Program.cs. Each module runs once.
 
 Ask the agent to read [AGENTS.md](AGENTS.md), then say:
 
-- “Give me an SRP refactor on a new branch.”
+- “Create an exercise for <learning objective> in <folder> on a new branch.”
 - “Give me a subtle bug to investigate.”
 - “Hint only.”
-- “Review my SRP changes on exercise/order-processing.”
+- “Review my changes on <branch> against <learning objective>.”
 - “Add this learning resource: <link>.”
 
 Requirements and reviews stay in chat. Tell the coach which exercise to review; it uses code and Git history. No current-exercise documents or automatic logs.
