@@ -2,7 +2,7 @@ using Interfaces;
 
 ILearningModule[] modules =
 [
-    new Modules.SOLID.OCP.Exercise()
+    new Modules.SOLID.SRP.Exercise()
 ];
 
 foreach (var module in modules)
