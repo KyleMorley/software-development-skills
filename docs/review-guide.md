@@ -8,7 +8,7 @@ Review in chat. Do not create review files unless explicitly requested.
 - **Verification:** checks actually run and material limitations.
 - **Next step:** one revision or reflection.
 
-Assess required behaviour, independent reasons to change, consistent abstraction, appropriate complexity, and meaningful tests. For SRP, ask which changes can happen independently. More classes do not imply a better design.
+Derive assessment criteria from the agreed lesson objectives, requirements, and relevant learning resources. Do not impose a fixed set of design principles or a preferred solution. Keep unrelated observations optional and secondary.
 
 Use the exercise and branch named by the learner. Inspect final code and Git history to identify the starter and attempt. If the baseline or expected behaviour is unclear, state that or ask; do not invent requirements. Separate correctness defects, learning gaps, and optional preferences.
 
