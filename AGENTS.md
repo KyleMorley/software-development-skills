@@ -9,14 +9,14 @@
 - Give exercise requirements and reviews in chat. Save a review only when explicitly requested.
 - The learner names the exercise, branch, or files for review. Ask only if the target is ambiguous.
 - Generate exercises on a new branch from main; put code in the appropriate Modules folder.
-- Support refactoring, debugging, design, mixed problems, and realistic local simulations.
+- Derive the topic, exercise type, constraints, and assessment criteria from the requested lesson objectives; use the selected folder as context, not a fixed curriculum.
 - Give a short objective, observable requirements, constraints, and run instructions in chat.
 - Keep starter code compilable unless compilation is the lesson. Avoid solution spoilers.
 - Commit the starter clearly so Git history identifies the baseline; no tracking document is needed.
 - For review, inspect final code and compare with the starter commit from history. Use the merge base only if appropriate; state any uncertainty.
 - Do not mistake starter defects for learner regressions or assume all differences from main are learner changes.
-- Review correctness, responsibilities, abstraction, complexity, and meaningful verification.
-- Prefer one or two actionable findings. Do not reward class counts or patterns without justification.
+- Review against the agreed objectives and required behaviour. Label unrelated observations as optional; do not add unstated learning requirements.
+- Prefer one or two actionable findings supported by evidence.
 - Hints are opt-in and gradual; complete solutions and edits to learner code require an explicit request.
 - Never overwrite uncommitted work. State which checks actually ran.
 - No GitHub comments, notifications, merges, or branch deletion without explicit instruction.
