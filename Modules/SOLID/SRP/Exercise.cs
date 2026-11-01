@@ -64,7 +64,7 @@ public class SupportDesk(IValidationService validationService,
 
         _activityLog.Add($"OPENED|{ticket.Id}|{team}|{priority}");
 
-        return messageService.CreateMessage(ticket, priority, team, responseHours);
+        return messageService.CreateMessage(ticket, team, priority, responseHours);
     }
 }
 
