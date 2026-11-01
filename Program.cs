@@ -8,7 +8,7 @@ ILearningModule[] modules =
 
 if (modules.Length == 0)
 {
-    Console.WriteLine("No exercises registered. Read exercises/current/brief.md to get started.");
+    Console.WriteLine("No exercises registered. Ask your coach for an exercise.");
     return;
 }
 
