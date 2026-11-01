@@ -1,26 +1,15 @@
 # Review guide
 
-Judge the exercise against its stated outcomes and constraints, not an imagined production system.
+Review in chat. Do not create review files unless explicitly requested.
 
-| Dimension | Evidence to look for |
-| --- | --- |
-| Behaviour | Required outcomes preserved; intended defects fixed; relevant edge cases considered |
-| Responsibility | Independent reasons to change separated; orchestration remains understandable |
-| Abstraction | Functions describe coherent operations at a consistent level; useful names and boundaries |
-| Design tradeoffs | Complexity fits the problem; dependencies and patterns have concrete purposes |
-| Verification | Meaningful examples or tests cover the important behaviour and regression |
-| Explanation | Learner can explain decisions, assumptions, and remaining limitations |
+- **Outcome:** achieved, partly achieved, or not assessed; explain briefly.
+- **What worked:** concrete evidence in the implementation.
+- **Improve:** one or two prioritized findings with file locations and consequences.
+- **Verification:** checks actually run and material limitations.
+- **Next step:** one revision or reflection.
 
-For SRP, identify who or what drives a change. Ask whether notification, validation, storage, or orchestration rules can change independently. Splitting methods alone does not establish independent responsibilities, and small cohesive classes do not require further decomposition.
+Derive assessment criteria from the agreed lesson objectives, requirements, and relevant learning resources. Do not impose a fixed set of design principles or a preferred solution. Keep unrelated observations optional and secondary.
 
-For debugging, assess reproduction, root-cause reasoning, repair, and regression protection. For reliability, assess explicit failure assumptions and behaviour under retries, time, cancellation, concurrency, or partial success only where in scope.
+Use the exercise and branch named by the learner. Inspect final code and Git history to identify the starter and attempt. If the baseline or expected behaviour is unclear, state that or ask; do not invent requirements. Separate correctness defects, learning gaps, and optional preferences.
 
-Use qualitative outcomes:
-- Achieved: evidence supports the primary objective.
-- Partly achieved: useful progress with a specific remaining gap.
-- Not yet achieved: primary objective remains unmet.
-- Not assessed: evidence or execution unavailable.
-
-Separate correctness defects from design gaps and optional preferences. Prioritize the most useful one or two findings with file locations, impact, and a question or direction. Avoid a full replacement implementation unless requested.
-
-Passing tests is evidence about tested behaviour, not proof of sound design. Likewise, a sound design does not excuse broken required behaviour. Acknowledge assistance and distinguish observed implementation from reasoning the learner has not yet explained.
+Keep feedback short. Do not rewrite the solution or record progress automatically.

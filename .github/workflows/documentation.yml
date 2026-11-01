@@ -1,0 +1,34 @@
+name: Keep documentation concise
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check documentation limits
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          allowed = {
+              "AGENTS.md", "README.md", "docs/resources.md",
+              "docs/review-guide.md", "learning/profile.md",
+          }
+          paths = subprocess.check_output(["git", "ls-files", "-z"]).decode().split("\0")
+          errors = []
+          for name in filter(None, paths):
+              if name.startswith("exercises/current/") or name == "learning/progress.md":
+                  errors.append(f"{name}: exercise tracking is not allowed")
+              if not name.lower().endswith(".md"):
+                  continue
+              text = Path(name).read_text(encoding="utf-8-sig")
+              if name not in allowed:
+                  errors.append(f"{name}: explicitly authorize and allowlist new Markdown")
+              if len(text.splitlines()) > 80 or len(text.split()) > 600:
+                  errors.append(f"{name}: exceeds 80 lines or 600 words; shorten, do not split")
+          if errors:
+              raise SystemExit("\n".join(errors))
+          print("Documentation checks passed")
+          PY
