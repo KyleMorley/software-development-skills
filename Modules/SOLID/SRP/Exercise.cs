@@ -1,3 +1,4 @@
+using System.Numerics;
 using Interfaces;
 
 namespace Modules.SOLID.SRP;
@@ -14,7 +15,7 @@ public class Exercise : ILearningModule
             new Order("B-205", "Leo", [new OrderLine("Folder", 1, 8m)], false)
         };
 
-        var processor = new OrderProcessor();
+        var processor = new OrderProcessor(new CalculationService(), new ReceiptService());
         foreach (var order in orders)
         {
             Console.WriteLine(processor.Process(order));
@@ -29,44 +30,24 @@ public class Exercise : ILearningModule
 public record OrderLine(string Description, int Quantity, decimal UnitPrice);
 public record Order(string Id, string Customer, IReadOnlyList<OrderLine> Lines, bool PreferredCustomer);
 
-// Order processor currently has multiple reasons to chane
-// 1. Anytime a new property is required
-// 2. Anytime a new processing method is required. As more functions are required, the class has more reasons to change
+public record ClaclulatedResults(decimal Subtotal, decimal Discount, decimal Total);
 
-public class OrderProcessor
+// Order processor currently has multiple reasons to chane
+// Suppose the business wants to change the receipt's appearance without changing how discounts are calculated.
+// Should the class responsible for calculating discounts need to change?
+
+public class OrderProcessor(ICalculationService calculationService, IReceiptService receiptService) : IProcessService
 {
     private readonly List<string> _auditEntries = [];
     public IReadOnlyList<string> AuditEntries => _auditEntries;
 
+    /// <inheritdoc />
     public string Process(Order order)
     {
-        decimal subtotal = 0m;
-        foreach (var line in order.Lines)
-        {
-            if (line.Quantity <= 0 || line.UnitPrice < 0)
-                throw new ArgumentException("Invalid order line.");
+        var result = calculationService.CalculateTotals(order);
+        var receipt = receiptService.CreateReceipt(order, result);
 
-            subtotal += line.Quantity * line.UnitPrice;
-        }
-
-        decimal discount = order.PreferredCustomer && subtotal >= 25m
-            ? Math.Round(subtotal * 0.10m, 2, MidpointRounding.AwayFromZero)
-            : 0m;
-        decimal total = subtotal - discount;
-
-        var receipt = new List<string>
-        {
-            $"Order {order.Id} for {order.Customer}",
-            "------------------------------"
-        };
-        foreach (var line in order.Lines)
-            receipt.Add($"{line.Description}: {line.Quantity} x {line.UnitPrice:0.00}");
-
-        receipt.Add($"Subtotal: {subtotal:0.00}");
-        receipt.Add($"Discount: {discount:0.00}");
-        receipt.Add($"Total: {total:0.00}");
-
-        _auditEntries.Add($"PROCESSED|{order.Id}|{total:0.00}");
+        _auditEntries.Add($"PROCESSED|{order.Id}|{result.Total:0.00}");
         return string.Join(Environment.NewLine, receipt);
     }
 }
@@ -81,7 +62,55 @@ public interface IProcessService
     public string Process(Order order);
 }
 
-public class ProcessService : IProcessService
+public interface ICalculationService
 {
-    
+    public ClaclulatedResults CalculateTotals(Order order);
+}
+
+public class CalculationService : ICalculationService
+{
+    public ClaclulatedResults CalculateTotals(Order order)
+    {
+        decimal subtotal = 0m;
+        foreach (var line in order.Lines)
+        {
+            if (line.Quantity <= 0 || line.UnitPrice < 0)
+                throw new ArgumentException("Invalid order line.");
+
+            subtotal += line.Quantity * line.UnitPrice;
+        }
+
+        decimal discount = order.PreferredCustomer && subtotal >= 25m
+            ? Math.Round(subtotal * 0.10m, 2, MidpointRounding.AwayFromZero)
+            : 0m;
+
+        return new ClaclulatedResults(subtotal, discount, subtotal - discount);
+    }
+}
+
+
+public interface IReceiptService
+{
+    public List<string> CreateReceipt(Order order, ClaclulatedResults caclulations);
+}
+
+public class ReceiptService : IReceiptService
+{
+    public List<string> CreateReceipt(Order order, ClaclulatedResults results)
+    {
+        var receipt = new List<string>
+        {
+            $"Order {order.Id} for {order.Customer}",
+            "------------------------------"
+        };
+
+        foreach (var line in order.Lines)
+            receipt.Add($"{line.Description}: {line.Quantity} x {line.UnitPrice:0.00}");
+
+        receipt.Add($"Subtotal: {results.Subtotal:0.00}");
+        receipt.Add($"Discount: {results.Discount:0.00}");
+        receipt.Add($"Total: {results.Total:0.00}");
+
+        return receipt;
+    }
 }
