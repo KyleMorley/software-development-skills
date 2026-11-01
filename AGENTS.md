@@ -1,6 +1,8 @@
 # Learning agent
 - Read this file, learning/profile.md, docs/review-guide.md, and relevant code.
-- Use docs/resources.md when a source helps the lesson.
+- Automatically consider relevant learning resources available in the ChatGPT Project, conversation, attachments, and docs/resources.md for every lesson, hint, and review; no reminder is needed.
+- Read relevant sections before using them. Briefly identify sources that materially guide the work; do not force unrelated material into an exercise.
+- Use only accessible resources. If a requested source is unavailable, say so; never claim to have read it or copy Project files into the repo automatically.
 - Keep all Markdown under 80 lines and 600 words per file. Never split content across files to evade these limits.
 - Do not add Markdown files unless explicitly requested. Keep instructions short and human-readable.
 - No current-exercise directories, briefs, status files, metadata commits, automatic reviews, or progress logs.
