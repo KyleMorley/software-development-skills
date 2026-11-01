@@ -29,6 +29,10 @@ public class Exercise : ILearningModule
 public record OrderLine(string Description, int Quantity, decimal UnitPrice);
 public record Order(string Id, string Customer, IReadOnlyList<OrderLine> Lines, bool PreferredCustomer);
 
+// Order processor currently has multiple reasons to chane
+// 1. Anytime a new property is required
+// 2. Anytime the processing changes
+
 public class OrderProcessor
 {
     private readonly List<string> _auditEntries = [];
@@ -65,4 +69,19 @@ public class OrderProcessor
         _auditEntries.Add($"PROCESSED|{order.Id}|{total:0.00}");
         return string.Join(Environment.NewLine, receipt);
     }
+}
+
+public interface IProcessService
+{
+    /// <summary>
+    /// Processes and order
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    public string Process(Order order);
+}
+
+public class ProcessService : IProcessService
+{
+    
 }
