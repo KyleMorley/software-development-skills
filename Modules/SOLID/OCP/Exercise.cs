@@ -8,50 +8,113 @@ public class Exercise : ILearningModule
 
     public void Run()
     {
+        Dictionary<string, INotificationService> services = new()
+        {
+            ["Email"] = new EmailService(),
+            ["Sms"] = new SMSService(),
+            ["Push"] = new PushService(),
+            ["WebhookService"] = new WebhookService()
+        };
+
         var message = new Notification(
             "alex@example.com",
             "Your order has shipped",
             "Order A-104 is on its way.");
 
-        var sender = new NotificationSender();
-        foreach (var channel in new[] { "Email", "Sms", "Push" })
+        foreach (var channel in new[] { "Email", "Sms", "Push", "WebhookService" })
         {
-            Console.WriteLine(sender.Send(channel, message));
-        }
+            services.TryGetValue(channel, out var service);
+            if(service is null)
+                throw new Exception("Non supported service.");
 
-        // New requirement: support a "Webhook" channel using the same Send operation.
-        // Format: WEBHOOK|recipient|subject|body
-        // Existing channels and unknown-channel behaviour must remain unchanged.
+            Console.WriteLine(service.Notify(message));
+        }
     }
 }
 
 public record Notification(string Recipient, string Subject, string Body);
 
-// OCP review: What happens here whenever the product supports another channel?
-// How could a new channel be introduced without modifying existing channel rules?
-public class NotificationSender
+public interface INotificationService
 {
-    public string Send(string channel, Notification notification)
+    /// <summary>
+    /// Send push notification
+    /// </summary>
+    /// <param name="notification"></param>
+    /// <returns></returns>
+    public string Notify(Notification notification);
+}
+
+public interface IEmailService : INotificationService
+{  
+}
+
+public interface ISMSService : INotificationService
+{
+}
+
+public interface IPushService : INotificationService
+{
+}
+
+public interface IWebhookService : INotificationService
+{
+}
+
+public class EmailService : IEmailService
+{
+    /// <inheritdoc />
+    public string Notify(Notification notification)
     {
         if (string.IsNullOrWhiteSpace(notification.Recipient))
             throw new ArgumentException("Recipient is required.");
 
-        switch (channel)
-        {
-            case "Email":
-                return $"EMAIL TO {notification.Recipient}: {notification.Subject} - {notification.Body}";
+        return $"EMAIL TO {notification.Recipient}: {notification.Subject} - {notification.Body}";
+    }
+}
+public class SMSService : ISMSService
+{
+    /// <inheritdoc />
+    public string Notify(Notification notification)
+    {
+        if (string.IsNullOrWhiteSpace(notification.Recipient))
+            throw new ArgumentException("Recipient is required.");
 
-            case "Sms":
-                var smsBody = notification.Body.Length > 20
+        return $"SMS TO {notification.Recipient}: {CreateSmsBody(notification)}";
+    }
+
+    /// <summary>
+    /// Creates sms body
+    /// </summary>
+    /// <param name="notification"></param>
+    /// <returns></returns>
+    private static string CreateSmsBody(Notification notification)
+    {
+        return notification.Body.Length > 20
                     ? notification.Body[..20] + "..."
                     : notification.Body;
-                return $"SMS TO {notification.Recipient}: {smsBody}";
-
-            case "Push":
-                return $"PUSH TO {notification.Recipient}: {notification.Subject}";
-
-            default:
-                throw new NotSupportedException($"Unsupported channel: {channel}");
-        }
     }
+}
+
+public class PushService : IPushService
+{
+    /// <inheritdoc />
+    public string Notify(Notification notification)
+    {
+        if (string.IsNullOrWhiteSpace(notification.Recipient))
+            throw new ArgumentException("Recipient is required.");
+
+        return $"PUSH TO {notification.Recipient}: {notification.Subject}";
+    }   
+}
+
+public class WebhookService : IWebhookService
+{
+    /// <inheritdoc />
+    public string Notify(Notification notification)
+    {
+        if (string.IsNullOrWhiteSpace(notification.Recipient))
+            throw new ArgumentException("Recipient is required.");
+
+        return $"WBHOOK|{notification.Recipient}|{notification.Subject}|{notification.Body}";
+    }   
 }
