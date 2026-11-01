@@ -31,7 +31,7 @@ public record Order(string Id, string Customer, IReadOnlyList<OrderLine> Lines, 
 
 // Order processor currently has multiple reasons to chane
 // 1. Anytime a new property is required
-// 2. Anytime the processing changes
+// 2. Anytime a new processing method is required. As more functions are required, the class has more reasons to change
 
 public class OrderProcessor
 {
