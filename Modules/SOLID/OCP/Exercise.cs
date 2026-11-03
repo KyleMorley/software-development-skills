@@ -7,6 +7,8 @@ public class Exercise : ILearningModule
 {
     public string Name => "Open/Closed Principle";
 
+    // HINT: This list is fine. You don't need a dictionary as well.
+    // Each strategy just needs to tell us which DeliveryMethod it supports.
     public List<IShippingDeliveryCalculator> CalculationStrategies =
     [
         new StandardDeliveryService(),
@@ -25,8 +27,8 @@ public class Exercise : ILearningModule
             new Shipment("S-104", "Express", 2m, false)
         };
 
-        // REVIEW HINT 2: Who should select the delivery method: this runner or
-        // ShippingQuoteCalculator? Try to give each part just one job.
+        // HINT: Let the calculator pick the strategy; this runner can just
+        // print each quote. 'services' below no longer exists.
         var calculator = new ShippingQuoteCalculator(new ShipmentValdationService(), CalculationStrategies, shipments);
         foreach (var shipment in shipments)
         {
@@ -54,10 +56,15 @@ public class ShippingQuoteCalculator(IShipmentValidationService shipmentValidati
     List<IShippingDeliveryCalculator> shippingDeliveryCalculators,
     Shipment[] shipments)
 {
+    // HINT: You can simplify by keeping shipment loops in Run(), rather
+    // than duplicating them here. Quote() can handle one shipment at a time.
     public void ProcessShipments()
     {
         foreach (var shipment in shipments)
         {
+            // HINT: A List has no TryGetValue or string key lookup.
+            // After each strategy exposes its supported method, try searching
+            // the list with FirstOrDefault(...) or a simple foreach loop.
             if(!shippingDeliveryCalculators.(shipment.DeliveryMethod, out var shippingDeliveryCalculator))
             {
                 throw new NotSupportedException(
@@ -68,8 +75,9 @@ public class ShippingQuoteCalculator(IShipmentValidationService shipmentValidati
         }
     }
 
-    // REVIEW HINT 3: This type does not exist, and the caller passes only one
-    // argument. Can the shared interface help the method and caller agree?
+    // HINT: 'shippingDeliveryCalculator' is not defined in Quote().
+    // Find the matching strategy here, then call CalculateDelivery(shipment).
+    // If there is no match, preserve the NotSupportedException behaviour.
     public decimal Quote(Shipment shipment)
     {
         shipmentValidationService.ValidateShipment(shipment);
@@ -80,6 +88,9 @@ public class ShippingQuoteCalculator(IShipmentValidationService shipmentValidati
 
 public interface IShippingDeliveryCalculator
 {
+    // HINT: What read-only property could identify a strategy as
+    // "Standard", "Express", "Collection" or "Overnight"? Each class
+    // could supply its own value through this common interface.
     /// <summary>
     /// Calculate the shipment cost
     /// </summary>
