@@ -72,11 +72,18 @@ public class PurchaseRiskAssessor(List<IPurchase> purchases) : IPurchaseRiskAsse
 
         int score = 0;
 
-        foreach(PropertyInfo property in purchase.GetType().GetProperties())
+        // Reflection is overcomplicated for this
+        // foreach(PropertyInfo property in purchase.GetType().GetProperties())
+        // {
+        //     var purchaseType = purchases.FirstOrDefault(p => p.PurchaseType == property.Name);
+        //     if(purchaseType != null)
+        //         score += purchaseType.AddScore(purchase);
+        // }
+
+        // Better is simply loop the purchases
+        foreach(var rule in purchases)
         {
-            var purchaseType = purchases.FirstOrDefault(p => p.PurchaseType == property.Name);
-            if(purchaseType != null)
-                score += purchaseType.AddScore(purchase);
+            score += rule.AddScore(purchase);
         }
 
         score = Math.Min(score, 100);
