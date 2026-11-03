@@ -52,7 +52,7 @@ public class RewardPointsCalculator(List<IPointsAssignment> Rules)
 
         foreach(var rule in Rules)
         {
-            rule.AddPoints(stay);
+            points += rule.AddPoints(stay);
         }
 
         points = Math.Min(points, 100);
