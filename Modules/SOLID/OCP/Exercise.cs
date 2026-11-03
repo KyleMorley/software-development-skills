@@ -17,18 +17,6 @@ public class Exercise : ILearningModule
 
     public void Run()
     {
-        // REVIEW HINT 1: You already have CalculationStrategies above. Do you need
-        // both a list and a dictionary to represent the same services?
-        Dictionary<string, IShippingDeliveryCalculator> services = new()
-        {
-            ["Standard"] = new StandardDeliveryService(),
-            ["Express"] = new ExpresstDeliveryService(),
-            ["Collection"] = new CollectionService(),
-            ["Overnight"] = new OvernightDeliveryService(),
-        };
-
-        
-
         var shipments = new[]
         {
             new Shipment("S-101", "Standard", 3m, false),
@@ -39,7 +27,7 @@ public class Exercise : ILearningModule
 
         // REVIEW HINT 2: Who should select the delivery method: this runner or
         // ShippingQuoteCalculator? Try to give each part just one job.
-        var calculator = new ShippingQuoteCalculator(new ShipmentValdationService(), CalculationStrategies,  services, shipments);
+        var calculator = new ShippingQuoteCalculator(new ShipmentValdationService(), CalculationStrategies, shipments);
         foreach (var shipment in shipments)
         {
             if(!services.TryGetValue(shipment.DeliveryMethod, out var shippingDeliveryCalculator))
@@ -62,14 +50,15 @@ public record Shipment(
 // OCP review: What existing code must change when a delivery method is added?
 // In a real logistics platform, new carriers and delivery options arrive
 // regularly; adding one should not risk changing the behaviour of the others.
-public class ShippingQuoteCalculator(IShipmentValidationService shipmentValidationService, List<IShippingDeliveryCalculator> shippingDeliveryCalculators,
-Dictionary<string, IShippingDeliveryCalculator> services, Shipment[] shipments)
+public class ShippingQuoteCalculator(IShipmentValidationService shipmentValidationService,
+    List<IShippingDeliveryCalculator> shippingDeliveryCalculators,
+    Shipment[] shipments)
 {
     public void ProcessShipments()
     {
         foreach (var shipment in shipments)
         {
-            if(!services.TryGetValue(shipment.DeliveryMethod, out var shippingDeliveryCalculator))
+            if(!shippingDeliveryCalculators.(shipment.DeliveryMethod, out var shippingDeliveryCalculator))
             {
                 throw new NotSupportedException(
                     $"Unsupported delivery method: {shipment.DeliveryMethod}");
@@ -81,7 +70,7 @@ Dictionary<string, IShippingDeliveryCalculator> services, Shipment[] shipments)
 
     // REVIEW HINT 3: This type does not exist, and the caller passes only one
     // argument. Can the shared interface help the method and caller agree?
-    public decimal Quote(Shipment shipment, ShippingDeliveryCalculator shippingDeliveryCalculator)
+    public decimal Quote(Shipment shipment)
     {
         shipmentValidationService.ValidateShipment(shipment);
 
