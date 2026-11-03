@@ -8,113 +8,66 @@ public class Exercise : ILearningModule
 
     public void Run()
     {
-        Dictionary<string, INotificationService> services = new()
+        var shipments = new[]
         {
-            ["Email"] = new EmailService(),
-            ["Sms"] = new SMSService(),
-            ["Push"] = new PushService(),
-            ["WebhookService"] = new WebhookService()
+            new Shipment("S-101", "Standard", 3m, false),
+            new Shipment("S-102", "Express", 2m, true),
+            new Shipment("S-103", "Collection", 5m, false)
         };
 
-        var message = new Notification(
-            "alex@example.com",
-            "Your order has shipped",
-            "Order A-104 is on its way.");
+        var calculator = new ShippingQuoteCalculator();
+        foreach (var shipment in shipments)
+            Console.WriteLine($"{shipment.Id}: {calculator.Quote(shipment):0.00}");
 
-        foreach (var channel in new[] { "Email", "Sms", "Push", "WebhookService" })
+        // New requirement: support "Overnight" delivery.
+        // Charge 20.00 plus 4.00 per kilogram, with no fragile surcharge.
+        // Add an Overnight example to the output once you've refactored.
+    }
+}
+
+public record Shipment(
+    string Id,
+    string DeliveryMethod,
+    decimal WeightKg,
+    bool Fragile);
+
+// OCP review: What existing code must change when a delivery method is added?
+// In a real logistics platform, new carriers and delivery options arrive
+// regularly; adding one should not risk changing the behaviour of the others.
+public class ShippingQuoteCalculator
+{
+    public decimal Quote(Shipment shipment)
+    {
+        if (string.IsNullOrWhiteSpace(shipment.Id) ||
+            shipment.WeightKg <= 0m)
         {
-            services.TryGetValue(channel, out var service);
-            if(service is null)
-                throw new Exception("Non supported service.");
-
-            Console.WriteLine(service.Notify(message));
+            throw new ArgumentException("Invalid shipment.");
         }
+
+        decimal price;
+        switch (shipment.DeliveryMethod)
+        {
+            case "Standard":
+                price = 5m + (2m * shipment.WeightKg);
+                if (shipment.Fragile)
+                    price += 3m;
+                break;
+
+            case "Express":
+                price = 12m + (3m * shipment.WeightKg);
+                if (shipment.Fragile)
+                    price += 5m;
+                break;
+
+            case "Collection":
+                price = 0m;
+                break;
+
+            default:
+                throw new NotSupportedException(
+                    $"Unsupported delivery method: {shipment.DeliveryMethod}");
+        }
+
+        return price;
     }
-}
-
-public record Notification(string Recipient, string Subject, string Body);
-
-public interface INotificationService
-{
-    /// <summary>
-    /// Send push notification
-    /// </summary>
-    /// <param name="notification"></param>
-    /// <returns></returns>
-    public string Notify(Notification notification);
-}
-
-public interface IEmailService : INotificationService
-{  
-}
-
-public interface ISMSService : INotificationService
-{
-}
-
-public interface IPushService : INotificationService
-{
-}
-
-public interface IWebhookService : INotificationService
-{
-}
-
-public class EmailService : IEmailService
-{
-    /// <inheritdoc />
-    public string Notify(Notification notification)
-    {
-        if (string.IsNullOrWhiteSpace(notification.Recipient))
-            throw new ArgumentException("Recipient is required.");
-
-        return $"EMAIL TO {notification.Recipient}: {notification.Subject} - {notification.Body}";
-    }
-}
-public class SMSService : ISMSService
-{
-    /// <inheritdoc />
-    public string Notify(Notification notification)
-    {
-        if (string.IsNullOrWhiteSpace(notification.Recipient))
-            throw new ArgumentException("Recipient is required.");
-
-        return $"SMS TO {notification.Recipient}: {CreateSmsBody(notification)}";
-    }
-
-    /// <summary>
-    /// Creates sms body
-    /// </summary>
-    /// <param name="notification"></param>
-    /// <returns></returns>
-    private static string CreateSmsBody(Notification notification)
-    {
-        return notification.Body.Length > 20
-                    ? notification.Body[..20] + "..."
-                    : notification.Body;
-    }
-}
-
-public class PushService : IPushService
-{
-    /// <inheritdoc />
-    public string Notify(Notification notification)
-    {
-        if (string.IsNullOrWhiteSpace(notification.Recipient))
-            throw new ArgumentException("Recipient is required.");
-
-        return $"PUSH TO {notification.Recipient}: {notification.Subject}";
-    }   
-}
-
-public class WebhookService : IWebhookService
-{
-    /// <inheritdoc />
-    public string Notify(Notification notification)
-    {
-        if (string.IsNullOrWhiteSpace(notification.Recipient))
-            throw new ArgumentException("Recipient is required.");
-
-        return $"WBHOOK|{notification.Recipient}|{notification.Subject}|{notification.Body}";
-    }   
 }
