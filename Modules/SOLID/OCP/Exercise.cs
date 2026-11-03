@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using Interfaces;
 
 namespace Modules.SOLID.OCP;
@@ -5,6 +6,14 @@ namespace Modules.SOLID.OCP;
 public class Exercise : ILearningModule
 {
     public string Name => "Open/Closed Principle";
+
+    public List<IShippingDeliveryCalculator> CalculationStrategies =
+    [
+        new StandardDeliveryService(),
+        new ExpresstDeliveryService(),
+        new CollectionService(),
+        new OvernightDeliveryService()
+    ];
 
     public void Run()
     {
@@ -16,6 +25,8 @@ public class Exercise : ILearningModule
             ["Overnight"] = new OvernightDeliveryService(),
         };
 
+        
+
         var shipments = new[]
         {
             new Shipment("S-101", "Standard", 3m, false),
@@ -24,7 +35,7 @@ public class Exercise : ILearningModule
             new Shipment("S-104", "Express", 2m, false)
         };
 
-        var calculator = new ShippingQuoteCalculator(new ShipmentValdationService(), new);
+        var calculator = new ShippingQuoteCalculator(new ShipmentValdationService(), CalculationStrategies,  services, shipments);
         foreach (var shipment in shipments)
         {
             if(!services.TryGetValue(shipment.DeliveryMethod, out var shippingDeliveryCalculator))
@@ -47,8 +58,23 @@ public record Shipment(
 // OCP review: What existing code must change when a delivery method is added?
 // In a real logistics platform, new carriers and delivery options arrive
 // regularly; adding one should not risk changing the behaviour of the others.
-public class ShippingQuoteCalculator(IShipmentValidationService shipmentValidationService, IShippingDeliveryCalculator shippingDeliveryCalculator)
+public class ShippingQuoteCalculator(IShipmentValidationService shipmentValidationService, List<IShippingDeliveryCalculator> shippingDeliveryCalculators,
+Dictionary<string, IShippingDeliveryCalculator> services, Shipment[] shipments)
 {
+    public void ProcessShipments()
+    {
+        foreach (var shipment in shipments)
+        {
+            if(!services.TryGetValue(shipment.DeliveryMethod, out var shippingDeliveryCalculator))
+            {
+                throw new NotSupportedException(
+                    $"Unsupported delivery method: {shipment.DeliveryMethod}");
+            }
+
+            Console.WriteLine($"{shipment.Id}: {Quote(shipment):0.00}");
+        }
+    }
+    
     public decimal Quote(Shipment shipment)
     {
         shipmentValidationService.ValidateShipment(shipment);
@@ -93,12 +119,7 @@ public class OvernightDeliveryService : IShippingDeliveryCalculator
     /// <inheritdoc />
     public decimal CalculateDelivery(Shipment shipment)
     {
-        decimal price;
-        price = 5m + (2m * shipment.WeightKg);
-        if (shipment.Fragile)
-            price += 3m;
-
-        return price;
+        return 20m + (4m * shipment.WeightKg);
     }
 }
 
