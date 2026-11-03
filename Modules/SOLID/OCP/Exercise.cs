@@ -6,137 +6,71 @@ public class Exercise : ILearningModule
 {
     public string Name => "Open/Closed Principle";
 
-    public List<IShippingDeliveryCalculator> CalculationStrategies =
-    [
-        new StandardDeliveryService(),
-        new ExpresstDeliveryService(),
-        new CollectionService(),
-        new OvernightDeliveryService()
-    ];
-
     public void Run()
     {
-        var shipments = new[]
+        var purchases = new[]
         {
-            new Shipment("S-101", "Standard", 3m, false),
-            new Shipment("S-102", "Express", 2m, true),
-            new Shipment("S-103", "Collection", 5m, false),
-            new Shipment("S-104", "Express", 2m, false)
+            new Purchase("P-101", 80m, 2, false, false),
+            new Purchase("P-102", 650m, 1, true, true),
+            new Purchase("P-103", 120m, 4, true, false)
         };
 
-        var calculator = new ShippingQuoteCalculator(new ShipmentValdationService(), CalculationStrategies);
-        foreach (var shipment in shipments)
+        var assessor = new PurchaseRiskAssessor();
+        foreach (var purchase in purchases)
         {
-            Console.WriteLine($"{shipment.Id}: {calculator.Quote(shipment):0.00}");
+            var result = assessor.Assess(purchase);
+            Console.WriteLine($"{purchase.Id}: {result.Score} ({result.Level})");
         }
+
+        // New requirement: orders with 10 or more items add 15 risk points.
+        // Add an example demonstrating the new rule.
     }
 }
 
-public record Shipment(
+public record Purchase(
     string Id,
-    string DeliveryMethod,
-    decimal WeightKg,
-    bool Fragile);
+    decimal Total,
+    int ItemCount,
+    bool International,
+    bool NewCustomer);
 
-public class ShippingQuoteCalculator(IShipmentValidationService shipmentValidationService,
-    List<IShippingDeliveryCalculator> shippingDeliveryCalculators)
+public record RiskResult(int Score, string Level);
+
+// OCP review: Can a new risk signal be added without editing the assessment
+// algorithm or rewriting the existing signals?
+// Real-world example: A fraud team introduces new detection signals often.
+// Existing rules should remain stable while new rules are rolled out.
+public class PurchaseRiskAssessor
 {
-    public decimal Quote(Shipment shipment)
+    public RiskResult Assess(Purchase purchase)
     {
-        shipmentValidationService.ValidateShipment(shipment);
-        var shippingDeliveryCalculator = shippingDeliveryCalculators.FirstOrDefault(method => method.DeliveryMethod == shipment.DeliveryMethod) ?? throw new ArgumentException("Not supported delivert method.");
-        return shippingDeliveryCalculator.CalculateDelivery(shipment);
-    }
-}
-
-public interface IShippingDeliveryCalculator
-{
-    /// <summary>
-    /// Delivery type readonly property
-    /// </summary>
-    public string DeliveryMethod { get; }
-
-    /// <summary>
-    /// Calculate the shipment cost
-    /// </summary>
-    /// <returns></returns>
-    public decimal CalculateDelivery(Shipment shipment);
-}
-
-public class StandardDeliveryService : IShippingDeliveryCalculator
-{
-    /// <inheritdoc />
-    public string DeliveryMethod => "Standard";
-
-    /// <inheritdoc />
-    public decimal CalculateDelivery(Shipment shipment)
-    {
-        var price = 5m + (2m * shipment.WeightKg);
-        if (shipment.Fragile)
-            price += 3m;
-
-        return price;
-    }
-}
-
-public class CollectionService : IShippingDeliveryCalculator
-{
-    /// <inheritdoc />
-    public string DeliveryMethod => "Collection";
-
-    /// <inheritdoc />
-    public decimal CalculateDelivery(Shipment shipment)
-    {
-        return 0m;
-    }
-}
-
-public class OvernightDeliveryService : IShippingDeliveryCalculator
-{
-    /// <inheritdoc />
-    public string DeliveryMethod => "Overnight";
-
-    /// <inheritdoc />
-    public decimal CalculateDelivery(Shipment shipment)
-    {
-        return 20m + (4m * shipment.WeightKg);
-    }
-}
-
-public class ExpresstDeliveryService : IShippingDeliveryCalculator
-{
-    /// <inheritdoc />
-    public string DeliveryMethod => "Express";
-
-    /// <inheritdoc />
-    public decimal CalculateDelivery(Shipment shipment)
-    {
-        var price = 12m + (3m * shipment.WeightKg);
-        if (shipment.Fragile)
-            price += 5m;
-
-        return price;
-    }
-}
-
-public interface IShipmentValidationService
-{
-    /// <summary>
-    /// Validates a shipment
-    /// </summary>
-    /// <param name="shipment" cref="Shipment">The shipment to validate</param>
-    public void ValidateShipment(Shipment shipment);
-}
-
-public class ShipmentValdationService : IShipmentValidationService
-{
-    /// <inheritdoc />
-    public void ValidateShipment(Shipment shipment)
-    {
-        if (string.IsNullOrWhiteSpace(shipment.Id) ||
-            shipment.WeightKg <= 0m)
+        if (string.IsNullOrWhiteSpace(purchase.Id) ||
+            purchase.Total < 0m ||
+            purchase.ItemCount <= 0)
         {
-            throw new ArgumentException("Invalid shipment.");
+            throw new ArgumentException("Invalid purchase.");
         }
+
+        int score = 0;
+
+        if (purchase.NewCustomer)
+            score += 25;
+
+        if (purchase.International)
+            score += 20;
+
+        if (purchase.Total >= 500m)
+            score += 30;
+
+        score = Math.Min(score, 100);
+
+        string level = score switch
+        {
+            >= 60 => "High",
+            >= 30 => "Medium",
+            _ => "Low"
+        };
+
+        return new RiskResult(score, level);
     }
 }
