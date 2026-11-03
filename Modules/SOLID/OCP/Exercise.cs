@@ -1,5 +1,3 @@
-using System.Reflection;
-using System.Reflection.Metadata;
 using Interfaces;
 
 namespace Modules.SOLID.OCP;
@@ -8,163 +6,72 @@ public class Exercise : ILearningModule
 {
     public string Name => "Open/Closed Principle";
 
-    private readonly List<IPurchase> Purchases =
-    [
-        new NewCustomerPurchase(),
-        new InternationalPurchase(),
-        new TotalPurchase(),
-        new ItemPurchase()
-    ];
-
     public void Run()
     {
-        var purchases = new[]
+        var visits = new[]
         {
-            new Purchase("P-101", 80m, 2, false, false),
-            new Purchase("P-102", 650m, 1, true, true),
-            new Purchase("P-103", 120m, 4, true, false),
-            new Purchase("P-103", 20m, 10, false, false)
+            new HotelStay("H-101", 2, 180m, false, false, false),
+            new HotelStay("H-102", 5, 620m, true, true, false),
+            new HotelStay("H-103", 3, 250m, true, false, true)
         };
 
-        var assessor = new PurchaseRiskAssessor(Purchases);
-        
-        foreach (var purchase in purchases)
+        var calculator = new RewardPointsCalculator();
+        foreach (var stay in visits)
         {
-            var result = assessor.Assess(purchase);
-            Console.WriteLine($"{purchase.Id}: {result.Score} ({result.Level})");
+            var reward = calculator.Calculate(stay);
+            Console.WriteLine($"{stay.Id}: {reward.Points} points ({reward.Tier})");
         }
 
-        // New requirement: orders with 10 or more items add 15 risk points.
-        // Add an example demonstrating the new rule.
+        // New requirement: a stay booked at least 30 days in advance
+        // earns an extra 12 points. Add a sample that exercises this rule.
     }
 }
 
-public record Purchase(
+public record HotelStay(
     string Id,
-    decimal Total,
-    int ItemCount,
-    bool International,
-    bool NewCustomer);
+    int Nights,
+    decimal TotalCost,
+    bool LoyaltyMember,
+    bool WeekendStay,
+    bool BookedEarly);
 
-public record RiskResult(int Score, string Level);
+public record RewardResult(int Points, string Tier);
 
-// OCP review: Can a new risk signal be added without editing the assessment
-// algorithm or rewriting the existing signals?
-// Real-world example: A fraud team introduces new detection signals often.
-// Existing rules should remain stable while new rules are rolled out.
-
-public interface IPurchaseRiskAssessor
+// OCP question: When marketing introduces another way to earn points,
+// can you extend the system without editing the calculation algorithm?
+// Real-world benefit: Promotional rules change frequently; new promotions
+// should not risk breaking the existing loyalty rewards.
+public class RewardPointsCalculator
 {
-    /// <summary>
-    /// Assess the potential fraud for a purchase and return risk
-    /// </summary>
-    /// <param name="purchase"></param>
-    /// <returns></returns>
-    public RiskResult Assess(Purchase purchase);
-}
-
-public class PurchaseRiskAssessor(List<IPurchase> purchases) : IPurchaseRiskAssessor
-{
-    /// <inheritdoc />
-    public RiskResult Assess(Purchase purchase)
+    public RewardResult Calculate(HotelStay stay)
     {
-       ValidatePurchase(purchase);
-
-        int score = 0;
-
-        // Reflection is overcomplicated for this
-        // foreach(PropertyInfo property in purchase.GetType().GetProperties())
-        // {
-        //     var purchaseType = purchases.FirstOrDefault(p => p.PurchaseType == property.Name);
-        //     if(purchaseType != null)
-        //         score += purchaseType.AddScore(purchase);
-        // }
-
-        // Better is simply loop the purchases
-        foreach(var rule in purchases)
+        if (string.IsNullOrWhiteSpace(stay.Id) ||
+            stay.Nights <= 0 ||
+            stay.TotalCost < 0m)
         {
-            score += rule.AddScore(purchase);
+            throw new ArgumentException("Invalid hotel stay.");
         }
 
-        score = Math.Min(score, 100);
+        int points = stay.Nights * 5;
 
-        var level = AssignRiskLevel(score);
+        if (stay.LoyaltyMember)
+            points += 20;
 
-        return new RiskResult(score, level);
-    }
+        if (stay.WeekendStay)
+            points += 10;
 
-    /// <summary>
-    /// Ensures a purchase has valid data
-    /// </summary>
-    /// <param name="purchase"></param>
-    /// <exception cref="ArgumentException"></exception>
-    private static void ValidatePurchase(Purchase purchase)
-    {
-         if (string.IsNullOrWhiteSpace(purchase.Id) ||
-            purchase.Total < 0m ||
-            purchase.ItemCount <= 0)
+        if (stay.TotalCost >= 500m)
+            points += 25;
+
+        points = Math.Min(points, 100);
+
+        string tier = points switch
         {
-            throw new ArgumentException("Invalid purchase.");
-        }
-    }
-
-    private static string AssignRiskLevel(int score)
-    {
-        return score switch
-        {
-            >= 60 => "High",
-            >= 30 => "Medium",
-            _ => "Low"
+            >= 60 => "Gold",
+            >= 30 => "Silver",
+            _ => "Bronze"
         };
+
+        return new RewardResult(points, tier);
     }
-}
-
-public interface IPurchase
-{
-    /// <summary>
-    /// The type of purchase
-    /// </summary>
-    public string PurchaseType { get; }
-
-    /// <summary>
-    /// Adds risk score to a purchase
-    /// </summary>
-    /// <returns></returns>
-    public int AddScore(Purchase purchase);
-}
-
-public class NewCustomerPurchase : IPurchase
-{
-    /// <inheritdoc />
-    public string PurchaseType => "NewCustomer";
-
-    /// <inheritdoc />
-    public int AddScore(Purchase purchase) => purchase.NewCustomer ? 25 : 0;
-}
-
-public class InternationalPurchase : IPurchase
-{
-    /// <inheritdoc />
-    public string PurchaseType => "International";
-
-    /// <inheritdoc />
-    public int AddScore(Purchase purchase) => purchase.International ? 20 : 0;
-}
-
-public class TotalPurchase : IPurchase
-{
-    /// <inheritdoc />
-    public string PurchaseType => "Total";
-
-    /// <inheritdoc />
-    public int AddScore(Purchase purchase) => purchase.Total >= 500m ? 30 : 0;
-}
-
-public class ItemPurchase : IPurchase
-{
-    /// <inheritdoc />
-    public string PurchaseType => "ItemCount";
-
-    /// <inheritdoc />
-    public int AddScore(Purchase purchase) => purchase.ItemCount >= 10 ? 15 : 0;
 }
