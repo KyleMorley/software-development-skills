@@ -156,7 +156,7 @@ public class TotalPurchase : IPurchase
 public class ItemPurchase : IPurchase
 {
     /// <inheritdoc />
-    public string PurchaseType => "Total";
+    public string PurchaseType => "ItemCount";
 
     /// <inheritdoc />
     public int AddScore(Purchase purchase) => purchase.ItemCount >= 10 ? 15 : 0;
