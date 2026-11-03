@@ -17,6 +17,8 @@ public class Exercise : ILearningModule
 
     public void Run()
     {
+        // REVIEW HINT 1: You already have CalculationStrategies above. Do you need
+        // both a list and a dictionary to represent the same services?
         Dictionary<string, IShippingDeliveryCalculator> services = new()
         {
             ["Standard"] = new StandardDeliveryService(),
@@ -35,6 +37,8 @@ public class Exercise : ILearningModule
             new Shipment("S-104", "Express", 2m, false)
         };
 
+        // REVIEW HINT 2: Who should select the delivery method: this runner or
+        // ShippingQuoteCalculator? Try to give each part just one job.
         var calculator = new ShippingQuoteCalculator(new ShipmentValdationService(), CalculationStrategies,  services, shipments);
         foreach (var shipment in shipments)
         {
@@ -75,6 +79,8 @@ Dictionary<string, IShippingDeliveryCalculator> services, Shipment[] shipments)
         }
     }
 
+    // REVIEW HINT 3: This type does not exist, and the caller passes only one
+    // argument. Can the shared interface help the method and caller agree?
     public decimal Quote(Shipment shipment, ShippingDeliveryCalculator shippingDeliveryCalculator)
     {
         shipmentValidationService.ValidateShipment(shipment);
