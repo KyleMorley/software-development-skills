@@ -74,8 +74,8 @@ Dictionary<string, IShippingDeliveryCalculator> services, Shipment[] shipments)
             Console.WriteLine($"{shipment.Id}: {Quote(shipment):0.00}");
         }
     }
-    
-    public decimal Quote(Shipment shipment)
+
+    public decimal Quote(Shipment shipment, ShippingDeliveryCalculator shippingDeliveryCalculator)
     {
         shipmentValidationService.ValidateShipment(shipment);
 
