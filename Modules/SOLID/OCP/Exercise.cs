@@ -74,19 +74,14 @@ public class PurchaseRiskAssessor(List<IPurchase> purchases) : IPurchaseRiskAsse
 
         foreach(PropertyInfo property in purchase.GetType().GetProperties())
         {
-            var purcahseType = purchases.FirstOrDefault(p => p.PurchaseType == property.Name);
-            if(purcahseType != null)
-                score += purcahseType.AddScore(purchase);
+            var purchaseType = purchases.FirstOrDefault(p => p.PurchaseType == property.Name);
+            if(purchaseType != null)
+                score += purchaseType.AddScore(purchase);
         }
 
         score = Math.Min(score, 100);
 
-        string level = score switch
-        {
-            >= 60 => "High",
-            >= 30 => "Medium",
-            _ => "Low"
-        };
+        var level = AssignRiskLevel(score);
 
         return new RiskResult(score, level);
     }
@@ -104,6 +99,16 @@ public class PurchaseRiskAssessor(List<IPurchase> purchases) : IPurchaseRiskAsse
         {
             throw new ArgumentException("Invalid purchase.");
         }
+    }
+
+    private static string AssignRiskLevel(int score)
+    {
+        return score switch
+        {
+            >= 60 => "High",
+            >= 30 => "Medium",
+            _ => "Low"
+        };
     }
 }
 
