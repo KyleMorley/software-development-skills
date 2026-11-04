@@ -6,6 +6,14 @@ public class Exercise : ILearningModule
 {
     public string Name => "Open/Closed Principle";
 
+    private readonly IEnumerable<ICarRentalRules> Rules =
+    [
+        new DriverAgeRuleService(),
+        new AirportPickupeRuleService(),
+        new ChildSeatRuleService(),
+        new GPSRequestRuleService()
+    ];
+
     public void Run()
     {
         var rentals = new[]
@@ -15,7 +23,7 @@ public class Exercise : ILearningModule
             new CarRental("R-103", 1, 45, false, true, true)
         };
 
-        var calculator = new RentalPriceCalculator();
+        var calculator = new RentalPriceCalculator(new RentalValidationService(), Rules);
         foreach (var rental in rentals)
             Console.WriteLine($"{rental.Id}: {calculator.Calculate(rental):0.00}");
     }
@@ -32,9 +40,35 @@ public record CarRental(
 // OCP exercise: First protect the existing behaviour with regression tests.
 // Refactor without changing their expected results.
 // Only then add the NEW GPS charge described in the exercise requirements.
-public class RentalPriceCalculator
+public class RentalPriceCalculator(IRentalValidationService rentalValidationService, IEnumerable<ICarRentalRules> rules)
 {
     public decimal Calculate(CarRental rental)
+    {
+        rentalValidationService.ValidateRental(rental);
+
+        decimal total = rental.Days * 40m;
+
+        foreach(var rule in rules)
+        {
+            total += rule.AddCost(rental);
+        }
+
+        return total;
+    }
+}
+
+public interface IRentalValidationService
+{
+    /// <summary>
+    /// Verifies the rental has correct information
+    /// </summary>
+    /// <param name="rental"></param>
+    public void ValidateRental(CarRental rental);
+}
+
+public class RentalValidationService : IRentalValidationService
+{
+    public void ValidateRental(CarRental rental)
     {
         if (string.IsNullOrWhiteSpace(rental.Id) ||
             rental.Days <= 0 ||
@@ -42,18 +76,47 @@ public class RentalPriceCalculator
         {
             throw new ArgumentException("Invalid rental.");
         }
+    }
+}
 
-        decimal total = rental.Days * 40m;
+public interface ICarRentalRules
+{
+    /// <summary>
+    /// Adds a cost
+    /// </summary>
+    /// <param name="rental"></param>
+    /// <returns></returns>
+    public decimal AddCost(CarRental rental);
+}
 
-        if (rental.DriverAge < 25)
-            total += rental.Days * 12m;
+public class DriverAgeRuleService : ICarRentalRules
+{
+    public decimal AddCost(CarRental rental)
+    {
+        return rental.DriverAge < 25 ? rental.Days * 12m : 0m;
+    }
+}
 
-        if (rental.AirportPickup)
-            total += 25m;
+public class AirportPickupeRuleService : ICarRentalRules
+{
+    public decimal AddCost(CarRental rental)
+    {
+        return rental.AirportPickup ? 25m : 0m;
+    }
+}
 
-        if (rental.ChildSeat)
-            total += rental.Days * 8m;
+public class ChildSeatRuleService : ICarRentalRules
+{
+    public decimal AddCost(CarRental rental)
+    {
+        return rental.ChildSeat ? rental.Days * 8m : 0m;
+    }
+}
 
-        return total;
+public class GPSRequestRuleService : ICarRentalRules
+{
+    public decimal AddCost(CarRental rental)
+    {
+        return rental.GpsRequested ? rental.Days * 6m : 0m;
     }
 }
