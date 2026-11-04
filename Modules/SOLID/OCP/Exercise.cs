@@ -4,119 +4,78 @@ namespace Modules.SOLID.OCP;
 
 public class Exercise : ILearningModule
 {
-    public string Name => "Open/Closed Principle";
-
-    private readonly IEnumerable<ICarRentalRules> Rules =
-    [
-        new DriverAgeRuleService(),
-        new AirportPickupeRuleService(),
-        new ChildSeatRuleService(),
-        new GPSRequestRuleService()
-    ];
+    public string Name => "SRP and OCP Refactoring";
 
     public void Run()
     {
-        var rentals = new[]
+        var bookings = new[]
         {
-            new CarRental("R-101", 2, 30, false, false, false),
-            new CarRental("R-102", 3, 22, true, true, false),
-            new CarRental("R-103", 1, 45, false, true, true)
+            new EventBooking("E-101", "Ava", "Standard", 2, false, false, false),
+            new EventBooking("E-102", "Noah", "VIP", 1, true, true, false),
+            new EventBooking("E-103", "Mia", "Standard", 3, true, false, false)
         };
 
-        var calculator = new RentalPriceCalculator(new RentalValidationService(), Rules);
-        foreach (var rental in rentals)
-            Console.WriteLine($"{rental.Id}: {calculator.Calculate(rental):0.00}");
+        var processor = new EventBookingProcessor();
+        foreach (var booking in bookings)
+        {
+            Console.WriteLine(processor.Book(booking));
+            Console.WriteLine();
+        }
+
+        foreach (var entry in processor.BookingRecords)
+            Console.WriteLine(entry);
     }
 }
 
-public record CarRental(
+public record EventBooking(
     string Id,
-    int Days,
-    int DriverAge,
-    bool AirportPickup,
-    bool ChildSeat,
-    bool GpsRequested);
+    string Customer,
+    string TicketType,
+    int Seats,
+    bool Workshop,
+    bool EarlyBird,
+    bool IsStudent);
 
-// OCP exercise: First protect the existing behaviour with regression tests.
-// Refactor without changing their expected results.
-// Only then add the NEW GPS charge described in the exercise requirements.
-public class RentalPriceCalculator(IRentalValidationService rentalValidationService, IEnumerable<ICarRentalRules> rules)
+// Test-first refactoring: capture today's receipts, prices, records, and
+// invalid-input behaviour before changing this class.
+// SRP: What independent business requests could force this class to change?
+// OCP: What must be edited each time a new pricing rule is introduced?
+public class EventBookingProcessor
 {
-    public decimal Calculate(CarRental rental)
+    private readonly List<string> _bookingRecords = [];
+    public IReadOnlyList<string> BookingRecords => _bookingRecords;
+
+    public string Book(EventBooking booking)
     {
-        rentalValidationService.ValidateRental(rental);
-
-        decimal total = rental.Days * 40m;
-
-        foreach(var rule in rules)
+        if (string.IsNullOrWhiteSpace(booking.Id) ||
+            string.IsNullOrWhiteSpace(booking.Customer) ||
+            booking.Seats <= 0 ||
+            (booking.TicketType != "Standard" && booking.TicketType != "VIP"))
         {
-            total += rule.AddCost(rental);
+            throw new ArgumentException("Invalid event booking.");
         }
 
-        return total;
-    }
-}
+        decimal price = booking.TicketType == "VIP" ? 130m : 75m;
+        decimal subtotal = price * booking.Seats;
 
-public interface IRentalValidationService
-{
-    /// <summary>
-    /// Verifies the rental has correct information
-    /// </summary>
-    /// <param name="rental"></param>
-    public void ValidateRental(CarRental rental);
-}
+        if (booking.Workshop)
+            subtotal += 20m * booking.Seats;
 
-public class RentalValidationService : IRentalValidationService
-{
-    public void ValidateRental(CarRental rental)
-    {
-        if (string.IsNullOrWhiteSpace(rental.Id) ||
-            rental.Days <= 0 ||
-            rental.DriverAge < 18)
-        {
-            throw new ArgumentException("Invalid rental.");
-        }
-    }
-}
+        decimal discount = booking.EarlyBird
+            ? Math.Round(subtotal * 0.10m, 2, MidpointRounding.AwayFromZero)
+            : 0m;
 
-public interface ICarRentalRules
-{
-    /// <summary>
-    /// Adds a cost
-    /// </summary>
-    /// <param name="rental"></param>
-    /// <returns></returns>
-    public decimal AddCost(CarRental rental);
-}
+        decimal total = subtotal - discount;
 
-public class DriverAgeRuleService : ICarRentalRules
-{
-    public decimal AddCost(CarRental rental)
-    {
-        return rental.DriverAge < 25 ? rental.Days * 12m : 0m;
-    }
-}
+        var receipt = string.Join(Environment.NewLine,
+            $"Booking {booking.Id} for {booking.Customer}",
+            $"Tickets: {booking.Seats} x {booking.TicketType}",
+            $"Workshop: {(booking.Workshop ? "Yes" : "No")}",
+            $"Subtotal: {subtotal:0.00}",
+            $"Discount: {discount:0.00}",
+            $"Total: {total:0.00}");
 
-public class AirportPickupeRuleService : ICarRentalRules
-{
-    public decimal AddCost(CarRental rental)
-    {
-        return rental.AirportPickup ? 25m : 0m;
-    }
-}
-
-public class ChildSeatRuleService : ICarRentalRules
-{
-    public decimal AddCost(CarRental rental)
-    {
-        return rental.ChildSeat ? rental.Days * 8m : 0m;
-    }
-}
-
-public class GPSRequestRuleService : ICarRentalRules
-{
-    public decimal AddCost(CarRental rental)
-    {
-        return rental.GpsRequested ? rental.Days * 6m : 0m;
+        _bookingRecords.Add($"BOOKED|{booking.Id}|{total:0.00}");
+        return receipt;
     }
 }
