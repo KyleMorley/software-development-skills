@@ -150,13 +150,13 @@ public interface ICalculatorRules
     /// </summary>
     /// <param name="booking"></param>
     /// <returns></returns>
-    public decimal AddCost(EventBooking booking);
+    public decimal AddCost(EventBooking booking, decimal currentCost);
 }
 
 public class TicketTypeCost : ICalculatorRules
 {
     /// <inheritdoc />
-    public decimal AddCost(EventBooking booking)
+    public decimal AddCost(EventBooking booking, decimal currentCost)
     {
         return booking.TicketType == "VIP" ? 130m : 75m;
     }
@@ -165,9 +165,29 @@ public class TicketTypeCost : ICalculatorRules
 public class SeatsCost : ICalculatorRules
 {
     /// <inheritdoc />
-    public decimal AddCost(EventBooking booking)
+    public decimal AddCost(EventBooking booking, decimal currentCost)
     {
-        return booking.TicketType == "VIP" ? 130m : 75m;
+        return currentCost * booking.Seats;
+    }
+}
+
+public class WorkshopCost : ICalculatorRules
+{
+    /// <inheritdoc />
+    public decimal AddCost(EventBooking booking, decimal currentCost)
+    {
+        return booking.Workshop ? currentCost += 20m * booking.Seats : 0m;
+    }
+}
+
+public class EarlyBirdCost : ICalculatorRules
+{
+    /// <inheritdoc />
+    public decimal AddCost(EventBooking booking, decimal currentCost)
+    {
+        return booking.EarlyBird
+            ? Math.Round(currentCost * 0.10m, 2, MidpointRounding.AwayFromZero)
+            : 0m;
     }
 }
 
