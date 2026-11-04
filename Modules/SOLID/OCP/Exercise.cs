@@ -6,6 +6,17 @@ public class Exercise : ILearningModule
 {
     public string Name => "SRP and OCP Refactoring";
 
+    private readonly IEnumerable<ISubtotalRules> SubtotalRules =
+    [
+        new TicketTypeCost(),
+        new SeatsCost()
+    ];
+
+    private readonly IEnumerable<IDiscountRules> DiscountRules =
+    [
+        new EarlyBirdCost()
+    ];
+
     public void Run()
     {
         var bookings = new[]
@@ -15,7 +26,7 @@ public class Exercise : ILearningModule
             new EventBooking("E-103", "Mia", "Standard", 3, true, false, false)
         };
         var bookingRepository = new BookingRecordRepository();
-        var processor = new EventBookingProcessor(new EventBookingValidationService(), new BookingCostService(), new ReceiptService(), bookingRepository);
+        var processor = new EventBookingProcessor(new EventBookingValidationService(), new BookingCostService(SubtotalRules, DiscountRules), new ReceiptService(), bookingRepository);
 
         foreach (var booking in bookings)
         {
@@ -122,20 +133,25 @@ public interface IBookingCostService
     public BookingCosts AddCosts(EventBooking booking);
 }
 
-public class BookingCostService : IBookingCostService
+public class BookingCostService(
+    IEnumerable<ISubtotalRules> subtotalRules,
+    IEnumerable<IDiscountRules> discountRules) : IBookingCostService
 {
     /// <inheritdoc />
     public BookingCosts AddCosts(EventBooking booking)
     {
-        decimal price = booking.TicketType == "VIP" ? 130m : 75m;
-        decimal subtotal = price * booking.Seats;
+        var subtotal = 0m;
+        var discount = 0m;
 
-        if (booking.Workshop)
-            subtotal += 20m * booking.Seats;
+        foreach(var rule in subtotalRules)
+        {
+            subtotal += rule.AddCost(booking, subtotal);
+        }
 
-        decimal discount = booking.EarlyBird
-            ? Math.Round(subtotal * 0.10m, 2, MidpointRounding.AwayFromZero)
-            : 0m;
+        foreach(var rule in discountRules)
+        {
+            discount += rule.AddCost(booking, subtotal);
+        }
 
         decimal total = subtotal - discount;
 
@@ -143,7 +159,7 @@ public class BookingCostService : IBookingCostService
     }
 }
 
-public interface ICalculatorRules
+public interface ISubtotalRules
 {
     /// <summary>
     ///  Add costs
@@ -153,7 +169,17 @@ public interface ICalculatorRules
     public decimal AddCost(EventBooking booking, decimal currentCost);
 }
 
-public class TicketTypeCost : ICalculatorRules
+public interface IDiscountRules
+{
+    /// <summary>
+    ///  Add costs
+    /// </summary>
+    /// <param name="booking"></param>
+    /// <returns></returns>
+    public decimal AddCost(EventBooking booking, decimal currentCost);
+}
+
+public class TicketTypeCost : ISubtotalRules
 {
     /// <inheritdoc />
     public decimal AddCost(EventBooking booking, decimal currentCost)
@@ -162,7 +188,7 @@ public class TicketTypeCost : ICalculatorRules
     }
 }
 
-public class SeatsCost : ICalculatorRules
+public class SeatsCost : ISubtotalRules
 {
     /// <inheritdoc />
     public decimal AddCost(EventBooking booking, decimal currentCost)
@@ -171,7 +197,7 @@ public class SeatsCost : ICalculatorRules
     }
 }
 
-public class WorkshopCost : ICalculatorRules
+public class WorkshopCost : ISubtotalRules
 {
     /// <inheritdoc />
     public decimal AddCost(EventBooking booking, decimal currentCost)
@@ -180,7 +206,7 @@ public class WorkshopCost : ICalculatorRules
     }
 }
 
-public class EarlyBirdCost : ICalculatorRules
+public class EarlyBirdCost : IDiscountRules
 {
     /// <inheritdoc />
     public decimal AddCost(EventBooking booking, decimal currentCost)

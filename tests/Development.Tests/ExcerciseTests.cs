@@ -5,12 +5,23 @@ namespace Development.Tests;
 
 public class EventBookingProcessorTests
 {
+    private readonly IEnumerable<ISubtotalRules> SubtotalRules =
+    [
+        new TicketTypeCost(),
+        new SeatsCost()
+    ];
+
+    private readonly IEnumerable<IDiscountRules> DiscountRules =
+    [
+        new EarlyBirdCost()
+    ];
+
     [Fact]
     public void Book_Success_ShouldReturnReceiptString()
     {
         // Arrange
         var booking = new EventBooking("E-101", "Ava", "Standard", 2, false, false, false);
-        var service = new EventBookingProcessor(new EventBookingValidationService(), new BookingCostService(), new ReceiptService(), new BookingRecordRepository());
+        var service = new EventBookingProcessor(new EventBookingValidationService(), new BookingCostService(SubtotalRules, DiscountRules), new ReceiptService(), new BookingRecordRepository());
 
         var expectedResult = string.Join(Environment.NewLine,
             "Booking E-101 for Ava",
