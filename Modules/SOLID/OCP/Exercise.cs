@@ -9,7 +9,8 @@ public class Exercise : ILearningModule
     private readonly IEnumerable<ISubtotalRules> SubtotalRules =
     [
         new TicketTypeCost(),
-        new SeatsCost()
+        new SeatsCost(),
+        new WorkshopCost()
     ];
 
     private readonly IEnumerable<IDiscountRules> DiscountRules =
@@ -145,7 +146,7 @@ public class BookingCostService(
 
         foreach(var rule in subtotalRules)
         {
-            subtotal += rule.AddCost(booking, subtotal);
+            subtotal = rule.AddCost(booking, subtotal);
         }
 
         foreach(var rule in discountRules)
@@ -184,7 +185,7 @@ public class TicketTypeCost : ISubtotalRules
     /// <inheritdoc />
     public decimal AddCost(EventBooking booking, decimal currentCost)
     {
-        return booking.TicketType == "VIP" ? 130m : 75m;
+        return currentCost + booking.TicketType == "VIP" ? 130m : 75m;
     }
 }
 
@@ -202,7 +203,7 @@ public class WorkshopCost : ISubtotalRules
     /// <inheritdoc />
     public decimal AddCost(EventBooking booking, decimal currentCost)
     {
-        return booking.Workshop ? currentCost += 20m * booking.Seats : 0m;
+        return booking.Workshop ? currentCost += 20m * booking.Seats : currentCost;
     }
 }
 

@@ -8,7 +8,8 @@ public class EventBookingProcessorTests
     private readonly IEnumerable<ISubtotalRules> SubtotalRules =
     [
         new TicketTypeCost(),
-        new SeatsCost()
+        new SeatsCost(),
+        new WorkshopCost()
     ];
 
     private readonly IEnumerable<IDiscountRules> DiscountRules =
