@@ -15,12 +15,6 @@ public class OrderProcessorTests
         ["Express"] = new ExpresserviceLevelService()
     };
 
-    public IEnumerable<string> AllowedOrderTypes =
-    [
-        typeof(PickupOrder).Name,
-        typeof(DeliveryOrder).Name
-    ];
-
     private readonly OrderValidationService OrderValidationService = new();
     private OrderCostingService? OrderCostingService;
     private readonly OrderReceiptService OrderReceiptService = new();
@@ -31,7 +25,7 @@ public class OrderProcessorTests
     public void Process_Success_ShouldRetrunStringMatches()
     {
         // Arrnage
-        OrderCostingService = new(Policies, AllowedOrderTypes);
+        OrderCostingService = new(Policies);
         
         var processor = new OrderProcessor(OrderValidationService, OrderCostingService, OrderReceiptService, Notifier, OrderRepository);
         var orderA = new DeliveryOrder("A-101", "Ava", 2, "Standard", "Metro");
