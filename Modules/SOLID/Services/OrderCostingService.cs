@@ -3,7 +3,7 @@ using Modules.SOLID.Models;
 
 namespace Modules.SOLID.Services;
 
-public class OrderCostingService(IReadOnlyDictionary<string, IServiceLevelPolicy> policies) : IOrderCostingService
+public class OrderCostingService(IReadOnlyDictionary<string, IServiceLevelPolicy> policies, IEnumerable<string> AllowedOrderTypes) : IOrderCostingService
 {
     /// <inheritdoc />
     public OrderCosts CalculateCosts(Order order)
@@ -16,20 +16,26 @@ public class OrderCostingService(IReadOnlyDictionary<string, IServiceLevelPolicy
         var unitPrice = policy.ApplyFee();
 
         var subtotal = unitPrice * order.Quantity;
-        decimal fulfilmentFee;
 
-        if (order is PickupOrder)
-        {
-            fulfilmentFee = 0m;
-        }
-        else if (order is DeliveryOrder)
-        {
-            fulfilmentFee = order.DeliveryFee();
-        }
-        else
+        if(!AllowedOrderTypes.Contains(order.GetType().Name))
         {
             throw new ArgumentException("Unknown order type.");
         }
+
+        decimal fulfilmentFee = order.DeliveryFee();
+
+        // if (order is PickupOrder)
+        // {
+        //     fulfilmentFee = 0m;
+        // }
+        // else if (order is DeliveryOrder)
+        // {
+        //     fulfilmentFee = order.DeliveryFee();
+        // }
+        // else
+        // {
+        //     throw new ArgumentException("Unknown order type.");
+        // }
 
         var total = subtotal + fulfilmentFee;
 

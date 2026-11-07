@@ -15,6 +15,12 @@ public class Exercise : ILearningModule
         ["Express"] = new ExpresserviceLevelService()
     };
 
+    public IEnumerable<string> AllowedOrderTypes =
+    [
+        typeof(PickupOrder).ToString(),
+        typeof(DeliveryOrder).ToString()
+    ];
+
     public string Name => "SOLID Refactoring: Order Fulfilment";
     private readonly OrderValidationService OrderValidationService = new();
     private OrderCostingService? OrderCostingService;
@@ -24,7 +30,7 @@ public class Exercise : ILearningModule
 
     public void Run()
     {
-        OrderCostingService = new(Policies);
+        OrderCostingService = new(Policies, AllowedOrderTypes);
 
         var processor = new OrderProcessor(OrderValidationService, OrderCostingService, OrderReceiptService, Notifier, OrderRepository);
         var orders = new Order[]

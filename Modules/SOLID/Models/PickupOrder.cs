@@ -8,6 +8,5 @@ public sealed class PickupOrder(
     string destination)
     : Order(id, customer, quantity, serviceLevel, destination)
 {
-    public override decimal DeliveryFee() =>
-        throw new NotSupportedException("Pickup orders do not support delivery fees.");
+    public override decimal DeliveryFee() => 0m;
 }

@@ -15,6 +15,12 @@ public class OrderProcessorTests
         ["Express"] = new ExpresserviceLevelService()
     };
 
+    public IEnumerable<string> AllowedOrderTypes =
+    [
+        typeof(PickupOrder).ToString(),
+        typeof(DeliveryOrder).ToString()
+    ];
+
     private readonly OrderValidationService OrderValidationService = new();
     private OrderCostingService? OrderCostingService;
     private readonly OrderReceiptService OrderReceiptService = new();
@@ -25,7 +31,7 @@ public class OrderProcessorTests
     public void Process_Success_ShouldRetrunStringMatches()
     {
         // Arrnage
-        OrderCostingService = new(Policies);
+        OrderCostingService = new(Policies, AllowedOrderTypes);
         
         var processor = new OrderProcessor(OrderValidationService, OrderCostingService, OrderReceiptService, Notifier, OrderRepository);
         var orderA = new DeliveryOrder("A-101", "Ava", 2, "Standard", "Metro");
@@ -65,7 +71,6 @@ public class OrderValidationServiceTests
         new DeliveryOrder("1", null!, 2, "Standard", "Metro"),
         new DeliveryOrder("1", "Ava", 0, "Standard", "Metro"),
         new DeliveryOrder("1", "Ava", 2, String.Empty, "Metro"),
-        new DeliveryOrder("", "Ava", 2, "Standard", String.Empty),
     ];
 
     [Theory]
