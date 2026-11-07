@@ -4,7 +4,7 @@ using Modules.SOLID.Models;
 using Modules.SOLID.Repositories;
 using Modules.SOLID.Services;
 
-namespace Modules.SOLID.OCP;
+namespace Modules.SOLID;
 
 public class Exercise : ILearningModule
 {
