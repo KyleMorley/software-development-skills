@@ -32,3 +32,7 @@ Requirements and reviews stay in chat. Tell the coach which exercise to review; 
 - [Learning resources](docs/resources.md)
 
 Markdown is limited to 80 lines and 600 words per file, enforced in GitHub Actions. New Markdown files require an explicit request and an intentional allowlist change.
+
+## Tests
+
+dotnet test tests/Development.Tests/Development.Tests.csproj
