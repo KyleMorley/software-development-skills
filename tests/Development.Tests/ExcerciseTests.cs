@@ -1,77 +1,91 @@
-using Microsoft.VisualStudio.TestPlatform.Common.Utilities;
+using Modules.SOLID.Interfaces;
+using Modules.SOLID.Models;
 using Modules.SOLID.OCP;
+using Modules.SOLID.Repositories;
+using Modules.SOLID.Services;
 
 namespace Development.Tests;
 
-public class EventBookingProcessorTests
+public class OrderProcessorTests
 {
-    private readonly IEnumerable<ISubtotalRules> SubtotalRules =
-    [
-        new TicketTypeCost(),
-        new SeatsCost(),
-        new WorkshopCost()
-    ];
+     public IReadOnlyDictionary<string, IServiceLevelPolicy> Policies = new
+        Dictionary<string, IServiceLevelPolicy>
+    {
+        ["Standard"] = new StandardServiceLevelService(),
+        ["Express"] = new ExpresserviceLevelService()
+    };
 
-    private readonly IEnumerable<IDiscountRules> DiscountRules =
-    [
-        new EarlyBirdCost()
-    ];
+    private readonly OrderValidationService OrderValidationService = new();
+    private OrderCostingService? OrderCostingService;
+    private readonly OrderReceiptService OrderReceiptService = new();
+    private readonly ConsoleOrderNotifierService Notifier = new();
+    private readonly OrderRepository OrderRepository = new();
 
     [Fact]
-    public void Book_Success_ShouldReturnReceiptString()
+    public void Process_Success_ShouldRetrunStringMatches()
     {
-        // Arrange
-        var booking = new EventBooking("E-101", "Ava", "Standard", 2, false, false, false);
-        var service = new EventBookingProcessor(new EventBookingValidationService(), new BookingCostService(SubtotalRules, DiscountRules), new ReceiptService(), new BookingRecordRepository());
+        // Arrnage
+        OrderCostingService = new(Policies);
+        
+        var processor = new OrderProcessor(OrderValidationService, OrderCostingService, OrderReceiptService, Notifier, OrderRepository);
+        var orderA = new DeliveryOrder("A-101", "Ava", 2, "Standard", "Metro");
+        var orderB = new PickupOrder("A-102", "Noah", 1, "Express", "Store");
 
-        var expectedResult = string.Join(Environment.NewLine,
-            "Booking E-101 for Ava",
-            "Tickets: 2 x Standard",
-            "Workshop: No",
-            "Subtotal: 150.00",
-            "Discount: 0.00",
-            "Total: 150.00");
+        var expectedOrderA = string.Join(Environment.NewLine,
+            "Order A-101 for Ava",
+            "Service: Standard",
+            "Quantity: 2",
+            "Subtotal: 50.00",
+            "Fulfilment: 8.00",
+            "Total: 58.00");
+
+        var expectedOrderB = string.Join(Environment.NewLine,
+        "Order A-102 for Noah",
+        "Service: Express",
+        "Quantity: 1",
+        "Subtotal: 40.00",
+        "Fulfilment: 0.00",
+        "Total: 40.00");
 
         // Act
-        var receipt = service.Book(booking);
+        var actualOrderA = processor.Process(orderA);
+        var actualOrderB = processor.Process(orderB);
 
         // Assert
-        Assert.Equal(expectedResult, receipt);
+        Assert.Equal(expectedOrderA, actualOrderA);
+        Assert.Equal(expectedOrderB, actualOrderB);
     }
 }
 
-public class EventBookingValidationServiceTests
+public class OrderValidationServiceTests
 {
-    [Fact]
-    public void ValidateBooking_InvalidSeats_ShouldThrowArgumentException()
+    public static TheoryData<Order> InvalidOrders =
+    [
+        new DeliveryOrder("", "Ava", 2, "Standard", "Metro"),
+        new DeliveryOrder("1", null!, 2, "Standard", "Metro"),
+        new DeliveryOrder("1", "Ava", 0, "Standard", "Metro"),
+        new DeliveryOrder("1", "Ava", 2, String.Empty, "Metro"),
+        new DeliveryOrder("", "Ava", 2, "Standard", String.Empty),
+    ];
+
+    [Theory]
+    [MemberData(nameof(InvalidOrders))]
+    public void ValidateOrder_InvalidOrder_ShouldThrowArgumentException(Order order)
     {
         // Arrange
-        var booking = new EventBooking("E-101", "Ava", "Standard", 0, false, false, false);
-        var service = new EventBookingValidationService();
-
+        var service = new OrderValidationService();
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => service.ValidateBooking(booking));
+        Assert.Throws<ArgumentException>(() => service.ValidateOrder(order));
     }
 
     [Fact]
-    public void ValidateBooking_InvalidType_ShouldThrowArgumentException()
+    public void ValidateOrder_InvalidOrder_ShouldNotThrowArgumentException()
     {
         // Arrange
-        var booking = new EventBooking("E-101", "Ava", String.Empty, 0, false, false, false);
-        var service = new EventBookingValidationService();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => service.ValidateBooking(booking));
-    }
-
-    [Fact]
-    public void ValidateBooking_IsValid_ShouldNotThrowArgumentException()
-    {
-        // Arrange
-        var booking = new EventBooking("E-101", "Ava", "Standard", 1, false, false, false);
-        var service = new EventBookingValidationService();
+        var order = new DeliveryOrder("A-101", "Ava", 2, "Standard", "Metro");
+        var service = new OrderValidationService();
 
         // Act
-        service.ValidateBooking(booking);
+        service.ValidateOrder(order);
     }
 }
