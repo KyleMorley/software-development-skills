@@ -8,5 +8,5 @@ public sealed class PickupOrder(
     string destination)
     : Order(id, customer, quantity, serviceLevel, destination)
 {
-    public override decimal DeliveryFee() => 0m;
+    public override decimal Fee() => 0m;
 }

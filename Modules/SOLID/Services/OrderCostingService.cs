@@ -22,20 +22,7 @@ public class OrderCostingService(IReadOnlyDictionary<string, IServiceLevelPolicy
             throw new ArgumentException("Unknown order type.");
         }
 
-        decimal fulfilmentFee = order.DeliveryFee();
-
-        // if (order is PickupOrder)
-        // {
-        //     fulfilmentFee = 0m;
-        // }
-        // else if (order is DeliveryOrder)
-        // {
-        //     fulfilmentFee = order.DeliveryFee();
-        // }
-        // else
-        // {
-        //     throw new ArgumentException("Unknown order type.");
-        // }
+        decimal fulfilmentFee = order.Fee();
 
         var total = subtotal + fulfilmentFee;
 

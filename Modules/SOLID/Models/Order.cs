@@ -13,5 +13,5 @@ public abstract class Order(
     public string ServiceLevel { get; } = serviceLevel;
     public string Destination { get; } = destination;
 
-    public virtual decimal DeliveryFee() => 0m;
+    public virtual decimal Fee() => 0m;
 }

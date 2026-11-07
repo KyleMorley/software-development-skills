@@ -8,7 +8,7 @@ public sealed class DeliveryOrder(
     string destination)
     : Order(id, customer, quantity, serviceLevel, destination)
 {
-    public override decimal DeliveryFee() => Destination switch
+    public override decimal Fee() => Destination switch
     {
         "Metro" => 8m,
         "Regional" => 18m,

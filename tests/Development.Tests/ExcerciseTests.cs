@@ -17,8 +17,8 @@ public class OrderProcessorTests
 
     public IEnumerable<string> AllowedOrderTypes =
     [
-        typeof(PickupOrder).ToString(),
-        typeof(DeliveryOrder).ToString()
+        typeof(PickupOrder).Name,
+        typeof(DeliveryOrder).Name
     ];
 
     private readonly OrderValidationService OrderValidationService = new();

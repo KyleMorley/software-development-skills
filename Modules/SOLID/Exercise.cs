@@ -17,8 +17,8 @@ public class Exercise : ILearningModule
 
     public IEnumerable<string> AllowedOrderTypes =
     [
-        typeof(PickupOrder).ToString(),
-        typeof(DeliveryOrder).ToString()
+        typeof(PickupOrder).Name,
+        typeof(DeliveryOrder).Name
     ];
 
     public string Name => "SOLID Refactoring: Order Fulfilment";
