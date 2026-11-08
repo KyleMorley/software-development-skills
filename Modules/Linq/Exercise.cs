@@ -6,29 +6,29 @@ namespace Modules.Linq;
 
 public sealed class Exercise : ILearningModule
 {
-    public string Name => "LINQ Query Optimisation: Customer Spending";
+    public string Name => "LINQ Query Optimisation: Agent Ticket Analytics";
 
-    private readonly CustomerSummaryService customerSummaryService = new();
+    private readonly AgentSummaryService agentSummaryService = new();
 
     public void Run()
     {
-        var orders = CreateOrders(20_000);
-        var customerIds = Enumerable.Range(1, 1_000).ToArray();
+        var tickets = CreateTickets(20_000);
+        var agentIds = Enumerable.Range(1, 1_000).ToArray();
 
-        var results = customerSummaryService.GetCustomerSummaries(orders, customerIds);
+        var results = agentSummaryService.GetAgentSummaries(tickets, agentIds);
         Console.WriteLine($"Summaries: {results.Count}");
         foreach (var summary in results.Take(5))
-            Console.WriteLine($"{summary.CustomerId}: {summary.TotalSpent:C} ({summary.OrderCount} orders)");
+            Console.WriteLine($"{summary.AgentId}: {summary.TotalResolutionMinutes} minutes ({summary.ResolvedTicketCount} tickets)");
     }
 
-    private static List<Order> CreateOrders(int count)
+    private static List<Ticket> CreateTickets(int count)
     {
         var random = new Random(42);
         return Enumerable.Range(1, count)
-            .Select(id => new Order(
+            .Select(id => new Ticket(
                 id,
                 random.Next(1, 1_201),
-                random.Next(100, 20_000) / 100m,
+                random.Next(5, 241),
                 random.Next(0, 5) != 0,
                 random.Next(0, 20) == 0))
             .ToList();
