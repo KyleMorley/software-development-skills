@@ -1,6 +1,6 @@
 using Modules.Linq.Models;
 
-namespace Modukes.Linq.Interfaces;
+namespace Modules.Linq.Interfaces;
 
 public interface IInvoiceSummaryFormattingService
 {
