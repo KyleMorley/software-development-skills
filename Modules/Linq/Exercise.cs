@@ -6,30 +6,31 @@ namespace Modules.Linq;
 
 public sealed class Exercise : ILearningModule
 {
-    public string Name => "LINQ Query Optimisation: Agent Ticket Analytics";
+    public string Name => "LINQ Query Optimisation: Warehouse Shipments";
 
-    private readonly AgentSummaryService agentSummaryService = new();
+    private readonly WarehouseSummaryService warehouseSummaryService = new();
 
     public void Run()
     {
-        var tickets = CreateTickets(20_000);
-        var agentIds = Enumerable.Range(1, 1_000).ToArray();
+        var shipments = CreateShipments(20_000);
+        var warehouseIds = Enumerable.Range(1, 1_000).ToArray();
 
-        var results = agentSummaryService.GetAgentSummaries(tickets, agentIds);
+        var results = warehouseSummaryService.GetWarehouseSummaries(shipments, warehouseIds);
         Console.WriteLine($"Summaries: {results.Count}");
         foreach (var summary in results.Take(5))
-            Console.WriteLine($"{summary.AgentId}: {summary.TotalResolutionMinutes} minutes ({summary.ResolvedTicketCount} tickets)");
+            Console.WriteLine($"{summary.WarehouseId}: {summary.TotalWeightKg} kg ({summary.ShipmentCount} shipments)");
     }
 
-    private static List<Ticket> CreateTickets(int count)
+    private static List<Shipment> CreateShipments(int count)
     {
         var random = new Random(42);
-        return [.. Enumerable.Range(1, count)
-            .Select(id => new Ticket(
+        return Enumerable.Range(1, count)
+            .Select(id => new Shipment(
                 id,
                 random.Next(1, 1_201),
-                random.Next(5, 241),
+                random.Next(100, 20_000) / 100m,
                 random.Next(0, 5) != 0,
-                random.Next(0, 20) == 0))];
+                random.Next(0, 20) == 0))
+            .ToList();
     }
 }
