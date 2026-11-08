@@ -1,5 +1,3 @@
-using Modules.SOLID.Models;
-
 namespace Modules.SOLID.Interfaces;
 
 public interface IServiceLevelPolicy

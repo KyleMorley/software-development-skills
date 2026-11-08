@@ -1,90 +1,86 @@
-using Modules.SOLID.Interfaces;
-using Modules.SOLID.Models;
-using Modules.SOLID.OCP;
-using Modules.SOLID.Repositories;
-using Modules.SOLID.Services;
+using System.Diagnostics;
+using Modukes.Linq.Interfaces;
+using Modules.Linq.Models;
+using Modules.Linq.Services;
 
-namespace Development.Tests;
+namespace Development.Testsl;
 
-public class OrderProcessorTests
+public class InvoiceReportServiceTests
 {
-     public IReadOnlyDictionary<string, IServiceLevelPolicy> Policies = new
-        Dictionary<string, IServiceLevelPolicy>
+    private readonly IReadOnlyDictionary<string, IInvoiceSummaryFormattingService> FormattingServices = 
+        new Dictionary<string, IInvoiceSummaryFormattingService>
     {
-        ["Standard"] = new StandardServiceLevelService(),
-        ["Express"] = new ExpresserviceLevelService()
+        ["csv"] = new CsvFormattingService(),
+        ["text"] = new TextFormattingService()
     };
-
-    private readonly OrderValidationService OrderValidationService = new();
-    private OrderCostingService? OrderCostingService;
-    private readonly OrderReceiptService OrderReceiptService = new();
-    private readonly ConsoleOrderNotifierService Notifier = new();
-    private readonly OrderRepository OrderRepository = new();
-
+    
     [Fact]
-    public void Process_Success_ShouldRetrunStringMatches()
+    public void BuildSummaries_Performance_Base()
     {
-        // Arrnage
-        OrderCostingService = new(Policies);
-        
-        var processor = new OrderProcessor(OrderValidationService, OrderCostingService, OrderReceiptService, Notifier, OrderRepository);
-        var orderA = new DeliveryOrder("A-101", "Ava", 2, "Standard", "Metro");
-        var orderB = new PickupOrder("A-102", "Noah", 1, "Express", "Store");
-
-        var expectedOrderA = string.Join(Environment.NewLine,
-            "Order A-101 for Ava",
-            "Service: Standard",
-            "Quantity: 2",
-            "Subtotal: 50.00",
-            "Fulfilment: 8.00",
-            "Total: 58.00");
-
-        var expectedOrderB = string.Join(Environment.NewLine,
-        "Order A-102 for Noah",
-        "Service: Express",
-        "Quantity: 1",
-        "Subtotal: 40.00",
-        "Fulfilment: 0.00",
-        "Total: 40.00");
+        // Arrange
+        var invoices = CreateInvoices(200_000);
+        var accountIds = Enumerable.Range(1, 20_000).ToArray();
+        var service = new InvoiceReportService(FormattingServices);
 
         // Act
-        var actualOrderA = processor.Process(orderA);
-        var actualOrderB = processor.Process(orderB);
+        var stopwatch = Stopwatch.StartNew();
+        var result = service.BuildSummaries(invoices, accountIds);
+        stopwatch.Stop();
+        Console.WriteLine($"Execution time: {stopwatch.ElapsedMilliseconds} ms");
+        // Assert
+        Assert.Equal(20_000, result.Count);
+    }
+        private static List<Invoice> CreateInvoices(int count)
+    {
+        var random = new Random(42);
+        return [.. Enumerable.Range(1, count)
+            .Select(id => new Invoice(
+                id,
+                random.Next(1, 1_201),
+                random.Next(100, 20_000) / 100m,
+                random.Next(0, 5) != 0,
+                random.Next(0, 20) == 0))];
+    }
+
+    [Fact]
+    public void RenderReport_AsText_ReturnsCorrectString()
+    {
+        // Arrange
+        Invoice[] invoices = 
+        [
+            new Invoice(1, 1, 10m, true, false)
+        ];
+
+        var service = new InvoiceReportService(FormattingServices);
+
+        var expectedReport = "Account 1: $10.00 (1 paid invoices)";
+
+        // Act
+        var summaries = service.BuildSummaries(invoices, [1]);
+        var report = service.RenderReport(summaries, "text");
 
         // Assert
-        Assert.Equal(expectedOrderA, actualOrderA);
-        Assert.Equal(expectedOrderB, actualOrderB);
-    }
-}
-
-public class OrderValidationServiceTests
-{
-    public static TheoryData<Order> InvalidOrders =
-    [
-        new DeliveryOrder("", "Ava", 2, "Standard", "Metro"),
-        new DeliveryOrder("1", null!, 2, "Standard", "Metro"),
-        new DeliveryOrder("1", "Ava", 0, "Standard", "Metro"),
-        new DeliveryOrder("1", "Ava", 2, String.Empty, "Metro"),
-    ];
-
-    [Theory]
-    [MemberData(nameof(InvalidOrders))]
-    public void ValidateOrder_InvalidOrder_ShouldThrowArgumentException(Order order)
-    {
-        // Arrange
-        var service = new OrderValidationService();
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => service.ValidateOrder(order));
+        Assert.Equal(expectedReport, report);
     }
 
     [Fact]
-    public void ValidateOrder_InvalidOrder_ShouldNotThrowArgumentException()
+    public void RenderReport_AsCsv_ReturnsCorrectString()
     {
         // Arrange
-        var order = new DeliveryOrder("A-101", "Ava", 2, "Standard", "Metro");
-        var service = new OrderValidationService();
+        Invoice[] invoices = 
+        [
+            new Invoice(1, 1, 10m, true, false)
+        ];
+
+        var service = new InvoiceReportService(FormattingServices);
+
+        var expectedReport = "AccountId,TotalPaid,PaidInvoiceCount\n1,10,1";
 
         // Act
-        service.ValidateOrder(order);
+        var summaries = service.BuildSummaries(invoices, [1]);
+        var report = service.RenderReport(summaries, "csv");
+        Console.WriteLine(report);
+        // Assert
+        Assert.Equal(expectedReport, report);
     }
 }

@@ -1,29 +1,25 @@
+using Modukes.Linq.Interfaces;
 using Modules.Linq.Models;
 
 namespace Modules.Linq.Services;
 
-public sealed class InvoiceReportService
+public sealed class InvoiceReportService(IReadOnlyDictionary<string, IInvoiceSummaryFormattingService> formattingServices)
 {
-    // One summary per requested account ID, in input order.
-    // Duplicates are retained. Missing accounts produce zero-valued summaries.
-    // Only paid, non-voided invoices count.
     public List<AccountSummary> BuildSummaries(
         IReadOnlyList<Invoice> invoices,
         IReadOnlyList<int> accountIds)
     {
         var summaries = new List<AccountSummary>();
+        var accountIdsSet = new HashSet<int>(accountIds);
+        var invoicesLookup = invoices
+            .Where(invoice => accountIdsSet.Contains(invoice.AccountId) && invoice.IsPaid && !invoice.IsVoided)
+            .ToLookup(Invoice => Invoice.AccountId);
 
         foreach (var accountId in accountIds)
         {
-            var accountInvoices = invoices
-                .Where(invoice => invoice.AccountId == accountId)
-                .ToList();
+            var eligible = invoicesLookup[accountId];
 
-            var eligible = accountInvoices
-                .Where(invoice => invoice.IsPaid && !invoice.IsVoided)
-                .ToList();
-
-            var total = eligible.Select(invoice => invoice.Amount).ToList().Sum();
+            var total = eligible.Sum(invoice => invoice.Amount);
             summaries.Add(new AccountSummary(accountId, total, eligible.Count()));
         }
 
@@ -33,24 +29,13 @@ public sealed class InvoiceReportService
     // Supported formats are "text" and "csv".
     public string RenderReport(
         IReadOnlyList<AccountSummary> summaries,
-        string format)
+       string format)
     {
-        if (format == "csv")
+        if(!formattingServices.TryGetValue(format, out var formattingService))
         {
-            var rows = new List<string> { "AccountId,TotalPaid,PaidInvoiceCount" };
-            foreach (var summary in summaries)
-                rows.Add($"{summary.AccountId},{summary.TotalPaid.ToString(System.Globalization.CultureInfo.InvariantCulture)},{summary.PaidInvoiceCount}");
-            return string.Join(Environment.NewLine, rows);
+            throw new ArgumentException("Unknown report format.", nameof(format));
         }
 
-        if (format == "text")
-        {
-            var rows = new List<string>();
-            foreach (var summary in summaries)
-                rows.Add($"Account {summary.AccountId}: {summary.TotalPaid:C} ({summary.PaidInvoiceCount} paid invoices)");
-            return string.Join(Environment.NewLine, rows);
-        }
-
-        throw new ArgumentException("Unknown report format.", nameof(format));
+        return formattingService.FormatInvoiceSummaries(summaries);
     }
 }
