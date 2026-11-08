@@ -1,4 +1,5 @@
 using Modules.Linq.Models;
+using Modules.SOLID.Services;
 
 namespace Modules.Linq.Services;
 
@@ -12,22 +13,13 @@ public sealed class AgentSummaryService
         IReadOnlyList<int> agentIds)
     {
         var results = new List<AgentSummary>();
+        HashSet<int> agentIdsSet = [.. agentIds];
+        var ticketLookup = tickets.Where(ticket => agentIdsSet.Contains(ticket.AgentId) && ticket.IsResolved && !ticket.IsSpam).ToLookup(ticket => ticket.AgentId);
 
         foreach (var agentId in agentIds)
         {
-            var assignedTickets = tickets
-                .Where(ticket => ticket.AgentId == agentId)
-                .ToList();
-
-            var resolvedTickets = assignedTickets
-                .Where(ticket => ticket.IsResolved && !ticket.IsSpam)
-                .ToList();
-
-            var minutes = resolvedTickets
-                .Select(ticket => ticket.ResolutionMinutes)
-                .ToList()
-                .Sum();
-
+            var resolvedTickets = ticketLookup[agentId];
+            var minutes = resolvedTickets.Sum(ticket => ticket.ResolutionMinutes);
             var count = resolvedTickets.Count();
 
             results.Add(new AgentSummary(agentId, minutes, count));

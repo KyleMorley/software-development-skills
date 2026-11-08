@@ -24,13 +24,12 @@ public sealed class Exercise : ILearningModule
     private static List<Ticket> CreateTickets(int count)
     {
         var random = new Random(42);
-        return Enumerable.Range(1, count)
+        return [.. Enumerable.Range(1, count)
             .Select(id => new Ticket(
                 id,
                 random.Next(1, 1_201),
                 random.Next(5, 241),
                 random.Next(0, 5) != 0,
-                random.Next(0, 20) == 0))
-            .ToList();
+                random.Next(0, 20) == 0))];
     }
 }
