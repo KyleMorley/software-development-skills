@@ -12,23 +12,15 @@ public sealed class CustomerSummaryService
         IReadOnlyList<int> customerIds)
     {
         var results = new List<CustomerSummary>();
+        HashSet<int> cids = [.. customerIds];
+        var orderLookup = orders.Where(order => cids.Contains(order.CustomerId) && order.IsPaid && !order.IsCancelled).ToLookup(order => order.CustomerId);
 
         foreach (var customerId in customerIds)
         {
-            var matchingOrders = orders
-                .Where(order => order.CustomerId == customerId)
-                .ToList();
+            var matchingOrders = orderLookup[customerId].ToList();
 
-            var paidOrders = matchingOrders
-                .Where(order => order.IsPaid && !order.IsCancelled)
-                .ToList();
-
-            var total = paidOrders
-                .Select(order => order.Amount)
-                .ToList()
-                .Sum();
-
-            var count = paidOrders.Count();
+            var total = matchingOrders.Sum(x => x.Amount);
+            var count = matchingOrders.Count;
 
             results.Add(new CustomerSummary(customerId, total, count));
         }
