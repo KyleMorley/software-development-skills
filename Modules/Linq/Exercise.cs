@@ -7,13 +7,17 @@ namespace Modules.Linq;
 public sealed class Exercise : ILearningModule
 {
     public string Name => "LINQ + Design: Sensor Monitoring";
-
+    public SensorAlertService SensorAlertService = new();
+    public ConsoleAlertPublisher ConsoleAlertPublisher = new();
+    
     public void Run()
     {
         var readings = CreateReadings(100_000);
-        var service = new SensorAlertService();
 
-        var alerts = service.FindAndPublishAlerts(readings, 85m);
+        var alerts = SensorAlertService.FindAlerts(readings, 85m);
+        
+        ConsoleAlertPublisher.Publish(alerts);
+
         Console.WriteLine($"Total alerts: {alerts.Count}");
     }
 
