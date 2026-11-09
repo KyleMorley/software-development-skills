@@ -12,11 +12,11 @@ public sealed class SensorAlertService
         decimal temperatureLimitC)
     {   
         var alerts = readings
-            .Where(reading => reading.IsValid && reading.TemperatureC > temperatureLimitC)
+            .Where(reading => reading.IsValid)
             .GroupBy(reading => reading.SensorId)
             .Select(group => group
-                .Max(reading => reading))
-
+                .MaxBy(reading => reading.RecordedAt))
+            .Where(reading => reading.TemperatureC > temperatureLimitC)
             .OrderBy(reading => reading.SensorId)
             .Select(reading => new SensorAlert(
                 reading.SensorId,
