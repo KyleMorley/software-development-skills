@@ -1,5 +1,4 @@
 using Interfaces;
-using Modukes.Linq.Interfaces;
 using Modules.Linq.Models;
 using Modules.Linq.Services;
 
@@ -7,33 +6,29 @@ namespace Modules.Linq;
 
 public sealed class Exercise : ILearningModule
 {
-    public string Name => "LINQ + Design: Invoice Reporting";
-    private readonly IReadOnlyDictionary<string, IInvoiceSummaryFormattingService> FormattingServices = 
-        new Dictionary<string, IInvoiceSummaryFormattingService>
-    {
-        ["csv"] = new CsvFormattingService(),
-        ["text"] = new TextFormattingService()
-    };
-    
+    public string Name => "LINQ + Design: Sensor Monitoring";
+
     public void Run()
     {
-        var invoices = CreateInvoices(20_000);
-        var accountIds = Enumerable.Range(1, 1_000).ToArray();
-        var service = new InvoiceReportService(FormattingServices);
+        var readings = CreateReadings(100_000);
+        var service = new SensorAlertService();
 
-        var summaries = service.BuildSummaries(invoices, accountIds);
-        Console.WriteLine(service.RenderReport([.. summaries.Take(5)], "text"));
+        var alerts = service.FindAndPublishAlerts(readings, 85m);
+        Console.WriteLine($"Total alerts: {alerts.Count}");
     }
 
-    private static List<Invoice> CreateInvoices(int count)
+    private static List<SensorReading> CreateReadings(int count)
     {
         var random = new Random(42);
-        return [.. Enumerable.Range(1, count)
-            .Select(id => new Invoice(
+        var start = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+        return Enumerable.Range(1, count)
+            .Select(id => new SensorReading(
                 id,
-                random.Next(1, 1_201),
-                random.Next(100, 20_000) / 100m,
-                random.Next(0, 5) != 0,
-                random.Next(0, 20) == 0))];
+                random.Next(1, 401),
+                start.AddMinutes(random.Next(0, 300_000)),
+                random.Next(-100, 1_200) / 10m,
+                random.Next(0, 10) != 0))
+            .ToList();
     }
 }
