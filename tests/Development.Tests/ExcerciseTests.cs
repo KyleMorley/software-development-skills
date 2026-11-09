@@ -1,86 +1,44 @@
-using System.Diagnostics;
-using Modukes.Linq.Interfaces;
 using Modules.Linq.Models;
 using Modules.Linq.Services;
 
-namespace Development.Testsl;
+namespace Development.Tests;
 
-public class InvoiceReportServiceTests
+public class SensorAlertServiceTests
 {
-    private readonly IReadOnlyDictionary<string, IInvoiceSummaryFormattingService> FormattingServices = 
-        new Dictionary<string, IInvoiceSummaryFormattingService>
-    {
-        ["csv"] = new CsvFormattingService(),
-        ["text"] = new TextFormattingService()
-    };
-    
     [Fact]
-    public void BuildSummaries_Performance_Base()
+    public void FindAndPublishAlerts_UsesLatestValidReadingPerSensor()
     {
-        // Arrange
-        var invoices = CreateInvoices(200_000);
-        var accountIds = Enumerable.Range(1, 20_000).ToArray();
-        var service = new InvoiceReportService(FormattingServices);
-
-        // Act
-        var stopwatch = Stopwatch.StartNew();
-        var result = service.BuildSummaries(invoices, accountIds);
-        stopwatch.Stop();
-        Console.WriteLine($"Execution time: {stopwatch.ElapsedMilliseconds} ms");
-        // Assert
-        Assert.Equal(20_000, result.Count);
-    }
-        private static List<Invoice> CreateInvoices(int count)
-    {
-        var random = new Random(42);
-        return [.. Enumerable.Range(1, count)
-            .Select(id => new Invoice(
-                id,
-                random.Next(1, 1_201),
-                random.Next(100, 20_000) / 100m,
-                random.Next(0, 5) != 0,
-                random.Next(0, 20) == 0))];
-    }
-
-    [Fact]
-    public void RenderReport_AsText_ReturnsCorrectString()
-    {
-        // Arrange
-        Invoice[] invoices = 
+        var time = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        SensorReading[] readings =
         [
-            new Invoice(1, 1, 10m, true, false)
+            new(1, 2, time.AddMinutes(1), 95m, true),
+            new(2, 2, time.AddMinutes(2), 70m, true),
+            new(3, 1, time.AddMinutes(1), 91m, true),
+            new(4, 1, time.AddMinutes(2), 94m, false)
         ];
 
-        var service = new InvoiceReportService(FormattingServices);
+        var alerts = new SensorAlertService().FindAndPublishAlerts(readings, 85m);
 
-        var expectedReport = "Account 1: $10.00 (1 paid invoices)";
-
-        // Act
-        var summaries = service.BuildSummaries(invoices, [1]);
-        var report = service.RenderReport(summaries, "text");
-
-        // Assert
-        Assert.Equal(expectedReport, report);
+        var alert = Assert.Single(alerts);
+        Assert.Equal(1, alert.SensorId);
+        Assert.Equal(3, alert.ReadingId);
+        Assert.Equal(91m, alert.TemperatureC);
     }
 
     [Fact]
-    public void RenderReport_AsCsv_ReturnsCorrectString()
+    public void FindAndPublishAlerts_OrdersResultsAndUsesStrictLimit()
     {
-        // Arrange
-        Invoice[] invoices = 
+        var time = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        SensorReading[] readings =
         [
-            new Invoice(1, 1, 10m, true, false)
+            new(1, 7, time, 86m, true),
+            new(2, 2, time, 90m, true),
+            new(3, 3, time, 85m, true),
+            new(4, 4, time, 99m, false)
         ];
 
-        var service = new InvoiceReportService(FormattingServices);
+        var alerts = new SensorAlertService().FindAndPublishAlerts(readings, 85m);
 
-        var expectedReport = "AccountId,TotalPaid,PaidInvoiceCount\n1,10,1";
-
-        // Act
-        var summaries = service.BuildSummaries(invoices, [1]);
-        var report = service.RenderReport(summaries, "csv");
-        Console.WriteLine(report);
-        // Assert
-        Assert.Equal(expectedReport, report);
+        Assert.Equal(new[] { 2, 7 }, alerts.Select(alert => alert.SensorId));
     }
 }
