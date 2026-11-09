@@ -15,7 +15,7 @@ public sealed class SensorAlertService
             .Where(reading => reading.IsValid)
             .GroupBy(reading => reading.SensorId)
             .Select(group => group
-                .MaxBy(reading => reading.RecordedAt))
+                .MaxBy(reading => reading.RecordedAt)!)
             .Where(reading => reading.TemperatureC > temperatureLimitC)
             .OrderBy(reading => reading.SensorId)
             .Select(reading => new SensorAlert(
