@@ -2,7 +2,7 @@ using Interfaces;
 
 ILearningModule[] modules =
 [
-    new Modules.Linq.Exercise()
+    new Modules.Factory.Exercise()
 ];
 
 foreach (var module in modules)
