@@ -1,90 +1,77 @@
-using Modules.SOLID.Interfaces;
-using Modules.SOLID.Models;
-using Modules.SOLID.OCP;
-using Modules.SOLID.Repositories;
-using Modules.SOLID.Services;
+using System.Diagnostics;
+using Modules.Linq.Models;
+using Modules.Linq.Services;
 
 namespace Development.Tests;
 
-public class OrderProcessorTests
+public class SensorAlertServiceTests
 {
-     public IReadOnlyDictionary<string, IServiceLevelPolicy> Policies = new
-        Dictionary<string, IServiceLevelPolicy>
-    {
-        ["Standard"] = new StandardServiceLevelService(),
-        ["Express"] = new ExpresserviceLevelService()
-    };
-
-    private readonly OrderValidationService OrderValidationService = new();
-    private OrderCostingService? OrderCostingService;
-    private readonly OrderReceiptService OrderReceiptService = new();
-    private readonly ConsoleOrderNotifierService Notifier = new();
-    private readonly OrderRepository OrderRepository = new();
-
     [Fact]
-    public void Process_Success_ShouldRetrunStringMatches()
+    public void FindAndPublishAlerts_Perfomance_Baseline()
     {
-        // Arrnage
-        OrderCostingService = new(Policies);
-        
-        var processor = new OrderProcessor(OrderValidationService, OrderCostingService, OrderReceiptService, Notifier, OrderRepository);
-        var orderA = new DeliveryOrder("A-101", "Ava", 2, "Standard", "Metro");
-        var orderB = new PickupOrder("A-102", "Noah", 1, "Express", "Store");
-
-        var expectedOrderA = string.Join(Environment.NewLine,
-            "Order A-101 for Ava",
-            "Service: Standard",
-            "Quantity: 2",
-            "Subtotal: 50.00",
-            "Fulfilment: 8.00",
-            "Total: 58.00");
-
-        var expectedOrderB = string.Join(Environment.NewLine,
-        "Order A-102 for Noah",
-        "Service: Express",
-        "Quantity: 1",
-        "Subtotal: 40.00",
-        "Fulfilment: 0.00",
-        "Total: 40.00");
+        // Arrange
+        var readings = CreateReadings(20_000_000);
+        var service = new SensorAlertService();
 
         // Act
-        var actualOrderA = processor.Process(orderA);
-        var actualOrderB = processor.Process(orderB);
-
+        var stopwatch = Stopwatch.StartNew();
+        var result = service.FindAlerts(readings, 85m);
+        stopwatch.Stop();
+        Console.WriteLine($"Execution Time: {stopwatch.ElapsedMilliseconds} ms");
         // Assert
-        Assert.Equal(expectedOrderA, actualOrderA);
-        Assert.Equal(expectedOrderB, actualOrderB);
+        Assert.NotEmpty(result);
+        Assert.Equal(104, result.Count);
     }
-}
-
-public class OrderValidationServiceTests
-{
-    public static TheoryData<Order> InvalidOrders =
-    [
-        new DeliveryOrder("", "Ava", 2, "Standard", "Metro"),
-        new DeliveryOrder("1", null!, 2, "Standard", "Metro"),
-        new DeliveryOrder("1", "Ava", 0, "Standard", "Metro"),
-        new DeliveryOrder("1", "Ava", 2, String.Empty, "Metro"),
-    ];
-
-    [Theory]
-    [MemberData(nameof(InvalidOrders))]
-    public void ValidateOrder_InvalidOrder_ShouldThrowArgumentException(Order order)
+    
+    [Fact]
+    public void FindAndPublishAlerts_UsesLatestValidReadingPerSensor()
     {
-        // Arrange
-        var service = new OrderValidationService();
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => service.ValidateOrder(order));
+        var time = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        SensorReading[] readings =
+        [
+            new(1, 2, time.AddMinutes(1), 95m, true),
+            new(2, 2, time.AddMinutes(2), 70m, true),
+            new(3, 1, time.AddMinutes(1), 91m, true),
+            new(4, 1, time.AddMinutes(2), 94m, false)
+        ];
+
+        var alerts = new SensorAlertService().FindAlerts(readings, 85m);
+
+        var alert = Assert.Single(alerts);
+        Assert.Equal(1, alert.SensorId);
+        Assert.Equal(3, alert.ReadingId);
+        Assert.Equal(91m, alert.TemperatureC);
     }
 
     [Fact]
-    public void ValidateOrder_InvalidOrder_ShouldNotThrowArgumentException()
+    public void FindAndPublishAlerts_OrdersResultsAndUsesStrictLimit()
     {
-        // Arrange
-        var order = new DeliveryOrder("A-101", "Ava", 2, "Standard", "Metro");
-        var service = new OrderValidationService();
+        var time = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        SensorReading[] readings =
+        [
+            new(1, 7, time, 86m, true),
+            new(2, 2, time, 90m, true),
+            new(3, 3, time, 85m, true),
+            new(4, 4, time, 99m, false)
+        ];
 
-        // Act
-        service.ValidateOrder(order);
+        var alerts = new SensorAlertService().FindAlerts(readings, 85m);
+
+        Assert.Equal(new[] { 2, 7 }, alerts.Select(alert => alert.SensorId));
+    }
+
+    private static List<SensorReading> CreateReadings(int count)
+    {
+        var random = new Random(42);
+        var start = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+        return Enumerable.Range(1, count)
+            .Select(id => new SensorReading(
+                id,
+                random.Next(1, 401),
+                start.AddMinutes(random.Next(0, 300_000)),
+                random.Next(-100, 1_200) / 10m,
+                random.Next(0, 10) != 0))
+            .ToList();
     }
 }
