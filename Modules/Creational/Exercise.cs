@@ -134,15 +134,28 @@ public sealed class ReportExportService(IReportArchive archive)
             if (string.IsNullOrWhiteSpace(request.Title))
                 throw new ArgumentException("A report title is required.", nameof(request));
 
-            IReportRenderer renderer;
-            if (string.Equals(request.Format, "Csv", StringComparison.OrdinalIgnoreCase))
-                renderer = new CsvReportRenderer();
-            else if (string.Equals(request.Format, "Json", StringComparison.OrdinalIgnoreCase))
-                renderer = new JsonReportRenderer();
-            else
-                throw new NotSupportedException($"Format '{request.Format}' is not supported.");
+            // IReportRenderer renderer;
+            // if (string.Equals(request.Format, "Csv", StringComparison.OrdinalIgnoreCase))
+            //     renderer = new CsvReportRenderer();
+            // else if (string.Equals(request.Format, "Json", StringComparison.OrdinalIgnoreCase))
+            //     renderer = new JsonReportRenderer();
+            // else
+            //     throw new NotSupportedException($"Format '{request.Format}' is not supported.");
 
-            var contents = renderer.Render(request);
+            // var contents = renderer.Render(request);
+
+            // Select the appropriate concrete creator
+            Creator creator = request.Format.ToLowerInvariant() switch
+            {
+                "csv" => new CsvReportPolicy(),
+                "json" => new JsonReportPolicy(),
+                _ => throw new NotSupportedException(
+                    $"Format '{request.Format}' is not supported.")
+            };
+
+            // Execute the shared operation
+            string contents = creator.Apply(request);
+
             archive.Save(request.Id, contents);
 
             return $"Saved {request.Id} ({request.Format})";
