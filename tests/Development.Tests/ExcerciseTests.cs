@@ -1,33 +1,67 @@
+using System.Text.Json;
 using Modules.Creational;
 
 namespace Development.Tests;
 
-public class AlertDispatcherTests
+public class ReportExportTests
 {
-    public AlertFactory AlertFactory = new();
-
     [Fact]
-    public void Dispatch_SuccessEmailAlert_ShouldReturnString()
+    public void RunBatch_RendersAndArchivesBothFormats()
     {
-        // Arrange
-        var dispatcher = new AlertDispatcher(AlertFactory);
-        var alert = new AlertRequest("Email", "ops@example.test", "Database backup completed", false);
-        var expectedResult = "EMAIL from=alerts@example.test to=ops@example.test priority=normal: Database backup completed";
+        var archive = new InMemoryReportArchive();
+        var requests = new[]
+        {
+            new ExportRequest("A-1", "Csv", "Sales", ["North", "South"]),
+            new ExportRequest("A-2", "Json", "Incidents", ["INC-1"])
+        };
 
-        // Act
-        var actualResult = dispatcher.Dispatch(alert);
+        var results = Exercise.RunBatch(requests, archive);
 
-        // Assert
-        Assert.Equal(actualResult, expectedResult);
+        Assert.Equal(["Saved A-1 (Csv)", "Saved A-2 (Json)"], results);
+        Assert.Equal("CSV::Sales::North|South", archive.Documents["A-1"]);
+
+        using var json = JsonDocument.Parse(archive.Documents["A-2"]);
+        Assert.Equal("Incidents", json.RootElement.GetProperty("Title").GetString());
+        Assert.Equal("INC-1", json.RootElement.GetProperty("Entries")[0].GetString());
     }
 
     [Fact]
-    public void Dispatch_NullAlert_ShouldThrowArgumentNullException()
+    public void RunBatch_ReportsInvalidInputsAndContinuesProcessing()
     {
-        // Arrange
-        var dispatcher = new AlertDispatcher(AlertFactory);
+        var archive = new InMemoryReportArchive();
+        var requests = new[]
+        {
+            new ExportRequest("A-1", "Csv", "", ["Invalid"]),
+            new ExportRequest("A-2", "Xml", "Unsupported", ["Invalid"]),
+            new ExportRequest("A-3", "Csv", "Valid", ["Done"])
+        };
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => dispatcher.Dispatch(null!));
+        var results = Exercise.RunBatch(requests, archive);
+
+        Assert.StartsWith("Failed A-1: A report title is required.", results[0]);
+        Assert.Equal("Failed A-2: Format 'Xml' is not supported.", results[1]);
+        Assert.Equal("Saved A-3 (Csv)", results[2]);
+        Assert.Single(archive.Documents);
+        Assert.True(archive.Documents.ContainsKey("A-3"));
+    }
+
+    [Fact]
+    public void RunBatch_ReportsArchiveFailureAndContinuesProcessing()
+    {
+        var archive = new InMemoryReportArchive { FailOnId = "A-2" };
+        var requests = new[]
+        {
+            new ExportRequest("A-1", "Csv", "Before", ["One"]),
+            new ExportRequest("A-2", "Json", "Unavailable", ["Two"]),
+            new ExportRequest("A-3", "Csv", "After", ["Three"])
+        };
+
+        var results = Exercise.RunBatch(requests, archive);
+
+        Assert.Equal("Saved A-1 (Csv)", results[0]);
+        Assert.Equal("Failed A-2: Report archive is unavailable.", results[1]);
+        Assert.Equal("Saved A-3 (Csv)", results[2]);
+        Assert.Equal(2, archive.Documents.Count);
+        Assert.False(archive.Documents.ContainsKey("A-2"));
     }
 }
