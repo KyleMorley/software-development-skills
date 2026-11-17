@@ -83,6 +83,12 @@ public sealed class JsonReportRenderer : IReportRenderer
 public abstract class Creator
 {
     public abstract IReportRenderer Create();
+
+    public string Apply(ExportRequest request)
+    {
+        var report = Create();
+        return report.Render(request);
+    }
 }
 
 public class JsonReportPolicy : Creator
