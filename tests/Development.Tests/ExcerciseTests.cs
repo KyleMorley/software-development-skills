@@ -5,17 +5,24 @@ namespace Development.Tests;
 
 public class ReportExportTests
 {
+    private readonly Exercise ExrciseObject = new();
+    private ReportExportService? Exporter;
+    private ProcessingService? ProcessingService;
+
     [Fact]
     public void RunBatch_RendersAndArchivesBothFormats()
     {
         var archive = new InMemoryReportArchive();
+        Exporter = new(archive);
+        ProcessingService = new(Exporter);
+        
         var requests = new[]
         {
             new ExportRequest("A-1", "Csv", "Sales", ["North", "South"]),
             new ExportRequest("A-2", "Json", "Incidents", ["INC-1"])
         };
 
-        var results = Exercise.RunBatch(requests, archive);
+        var results = ProcessingService.RunBatch(requests);
 
         Assert.Equal(["Saved A-1 (Csv)", "Saved A-2 (Json)"], results);
         Assert.Equal("CSV::Sales::North|South", archive.Documents["A-1"]);
@@ -29,6 +36,9 @@ public class ReportExportTests
     public void RunBatch_ReportsInvalidInputsAndContinuesProcessing()
     {
         var archive = new InMemoryReportArchive();
+        Exporter = new(archive);
+        ProcessingService = new(Exporter);
+
         var requests = new[]
         {
             new ExportRequest("A-1", "Csv", "", ["Invalid"]),
@@ -36,7 +46,7 @@ public class ReportExportTests
             new ExportRequest("A-3", "Csv", "Valid", ["Done"])
         };
 
-        var results = Exercise.RunBatch(requests, archive);
+        var results = ProcessingService.RunBatch(requests);
 
         Assert.StartsWith("Failed A-1: A report title is required.", results[0]);
         Assert.Equal("Failed A-2: Format 'Xml' is not supported.", results[1]);
@@ -49,6 +59,9 @@ public class ReportExportTests
     public void RunBatch_ReportsArchiveFailureAndContinuesProcessing()
     {
         var archive = new InMemoryReportArchive { FailOnId = "A-2" };
+        Exporter = new(archive);
+        ProcessingService = new(Exporter);
+
         var requests = new[]
         {
             new ExportRequest("A-1", "Csv", "Before", ["One"]),
@@ -56,7 +69,7 @@ public class ReportExportTests
             new ExportRequest("A-3", "Csv", "After", ["Three"])
         };
 
-        var results = Exercise.RunBatch(requests, archive);
+        var results = ProcessingService.RunBatch(requests);
 
         Assert.Equal("Saved A-1 (Csv)", results[0]);
         Assert.Equal("Failed A-2: Report archive is unavailable.", results[1]);

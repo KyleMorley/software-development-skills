@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Text.Json;
 using Interfaces;
 
@@ -6,10 +7,15 @@ namespace Modules.Creational;
 public sealed class Exercise : ILearningModule
 {
     public string Name => "Factory Method: Report Exports";
+    public InMemoryReportArchive Archive = new() { FailOnId = "R-004" };
+    private ReportExportService? Exporter;
+    private ProcessingService? ProcessingService;
 
     public void Run()
     {
-        var archive = new InMemoryReportArchive { FailOnId = "R-004" };
+        Exporter = new(Archive);
+        ProcessingService = new(Exporter);
+
         var requests = new[]
         {
             new ExportRequest("R-001", "Csv", "Weekly sales", ["North", "South"]),
@@ -20,15 +26,28 @@ public sealed class Exercise : ILearningModule
             new ExportRequest("R-006", "Csv", "Completed work", ["TASK-5"])
         };
 
-        foreach (var result in RunBatch(requests, archive))
+        foreach (var result in ProcessingService.RunBatch(requests))
             Console.WriteLine(result);
     }
+}
 
-    public static IReadOnlyList<string> RunBatch(
-        IEnumerable<ExportRequest> requests,
-        IReportArchive archive)
+public interface IProcessingService
+{
+    /// <summary>
+    /// Batch process
+    /// </summary>
+    /// <param name="requests"></param>
+    /// <returns></returns>
+    public IReadOnlyList<string> RunBatch(
+        IEnumerable<ExportRequest> requests);
+}
+
+public class ProcessingService(ReportExportService exporter) : IProcessingService
+{
+    /// <inheritdoc />
+    public IReadOnlyList<string> RunBatch(
+        IEnumerable<ExportRequest> requests)
     {
-        var exporter = new ReportExportService(archive);
         var results = new List<string>();
 
         foreach (var request in requests)
@@ -61,6 +80,22 @@ public sealed class JsonReportRenderer : IReportRenderer
         JsonSerializer.Serialize(new { request.Title, request.Entries });
 }
 
+public abstract class Creator
+{
+    public abstract IReportRenderer Create();
+}
+
+public class JsonReportPolicy : Creator
+{
+    public override IReportRenderer Create() => new JsonReportRenderer();
+}
+
+public class CsvReportPolicy : Creator
+{
+    public override IReportRenderer Create() => new CsvReportRenderer();
+}
+
+
 public interface IReportArchive
 {
     void Save(string id, string contents);
@@ -68,7 +103,7 @@ public interface IReportArchive
 
 public sealed class InMemoryReportArchive : IReportArchive
 {
-    private readonly Dictionary<string, string> _documents = new();
+    private readonly Dictionary<string, string> _documents = [];
 
     public string? FailOnId { get; init; }
     public IReadOnlyDictionary<string, string> Documents => _documents;
